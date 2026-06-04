@@ -1,0 +1,42 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDE/editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# Build outputs
+build/
+out/
+target/
+*.class
+*.jar
+*.war
+
+# Gradle
+.gradle/
+
+# Maven
+target/
+
+build/
+Phase_2/build/
+
+__pycache__/
+*.class
+*.jar
+*.log
+*.tmp
