@@ -1,13 +1,11 @@
 grammar SimpleLang;
 @header {
-    import java.util.*;
-
-    import main.ast.core.*;
-    import main.ast.declarations.*;
-    import main.ast.statements.*;
-    import main.ast.expressions.*;
-    import main.ast.expressions.literals.*;
-    import main.ast.types.*;
+import main.ast.core.*;
+import main.ast.declarations.*;
+import main.ast.statements.*;
+import main.ast.expressions.*;
+import main.ast.expressions.literals.*;
+import main.ast.types.*;
 }
 
 program returns [Program programRet]
@@ -29,11 +27,11 @@ topLevelDecl returns [TopLevelDecl topLevelDeclRet]
       }
     ;
 
-module returns [Module moduleRet]
+module returns [main.ast.declarations.Module moduleRet]
     :
         k=KW_MODULE
         i=ID
-        { $moduleRet = new Module(new Identifier($i.text));
+        { $moduleRet = new main.ast.declarations.Module(new Identifier($i.text));
         $moduleRet.setLine($i.line); }
         (KW_INCLUDES i1=ID { $moduleRet.addInclude(new Identifier($i1.text)); } (COMMA i2=ID { $moduleRet.addInclude(new Identifier($i2.text)); } )*)?
         KW_BEGIN
@@ -314,51 +312,66 @@ loc returns [Location locationRet]
             $locationRet = new ThisLoc();
             $locationRet.setLine($k.line);
         }
-        (DOT i=ID
-            {
-                $locationRet = new Location($locationRet, new Identifier($i.text));
-                $locationRet.setLine($i.line);
-            }
-        )*
-    |
-        i=ID
+        (
+        DOT i=ID
         {
-            $locationRet = new Location(new Identifier($i.text));
+            $locationRet = new MemberLoc(
+                new Identifier($locationRet.toString()),
+                new SimpleLoc(new Identifier($i.text))
+            );
             $locationRet.setLine($i.line);
         }
-        (DOT j=ID
-            {
-                $locationRet = new Location($locationRet, new Identifier($j.text));
-                $locationRet.setLine($j.line);
-            }
+        )*
+        i=ID
+        {
+            $locationRet = new SimpleLoc(new Identifier($i.text));
+            $locationRet.setLine($i.line);
+        }
+        (
+        DOT j=ID
+        {
+            $locationRet = new MemberLoc(
+                new Identifier($locationRet.toString()),
+                new SimpleLoc(new Identifier($j.text))
+            );
+            $locationRet.setLine($j.line);
+        }
         )*
     ;
 
 receiver returns [Location locationRet]
     :
-        k=KW_THIS
+    k=KW_THIS
+    {
+        $locationRet = new ThisLoc();
+        $locationRet.setLine($k.line);
+    }
+    (
+        DOT i=ID
         {
-            $locationRet = new ThisLoc();
-            $locationRet.setLine($k.line);
-        }
-        (DOT i=ID
-            {
-                $locationRet = new Location($locationRet, new Identifier($i.text));
-                $locationRet.setLine($i.line);
-            }
-        )*
-    |
-        i=ID
-        {
-            $locationRet = new Location(new Identifier($i.text));
+            $locationRet = new MemberLoc(
+                new Identifier($locationRet.toString()),
+                new SimpleLoc(new Identifier($i.text))
+            );
             $locationRet.setLine($i.line);
         }
-        (DOT j=ID
-            {
-                $locationRet = new Location($locationRet, new Identifier($j.text));
-                $locationRet.setLine($j.line);
-            }
-        )*
+    )*
+    |
+    i=ID
+    {
+        $locationRet = new SimpleLoc(new Identifier($i.text));
+        $locationRet.setLine($i.line);
+    }
+    (
+        DOT j=ID
+        {
+            $locationRet = new MemberLoc(
+                new Identifier($locationRet.toString()),
+                new SimpleLoc(new Identifier($j.text))
+            );
+            $locationRet.setLine($j.line);
+        }
+    )*
     ;
 
 methodcall returns [MethodCall methodCallRet]

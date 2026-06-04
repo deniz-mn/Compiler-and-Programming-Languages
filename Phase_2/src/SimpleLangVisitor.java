@@ -1,13 +1,11 @@
 // Generated from src/main/grammar/SimpleLang.g4 by ANTLR 4.13.1
 
-    import java.util.*;
-
-    import main.ast.core.*;
-    import main.ast.declarations.*;
-    import main.ast.statements.*;
-    import main.ast.expressions.*;
-    import main.ast.expressions.literals.*;
-    import main.ast.types.*;
+import main.ast.core.*;
+import main.ast.declarations.*;
+import main.ast.statements.*;
+import main.ast.expressions.*;
+import main.ast.expressions.literals.*;
+import main.ast.types.*;
 
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
