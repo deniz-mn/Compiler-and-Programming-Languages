@@ -245,16 +245,6 @@ public interface SimpleLangListener extends ParseTreeListener {
 	 */
 	void exitLoc(SimpleLangParser.LocContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link SimpleLangParser#receiver}.
-	 * @param ctx the parse tree
-	 */
-	void enterReceiver(SimpleLangParser.ReceiverContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link SimpleLangParser#receiver}.
-	 * @param ctx the parse tree
-	 */
-	void exitReceiver(SimpleLangParser.ReceiverContext ctx);
-	/**
 	 * Enter a parse tree produced by {@link SimpleLangParser#methodcall}.
 	 * @param ctx the parse tree
 	 */
@@ -265,6 +255,16 @@ public interface SimpleLangListener extends ParseTreeListener {
 	 */
 	void exitMethodcall(SimpleLangParser.MethodcallContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link SimpleLangParser#callArgs}.
+	 * @param ctx the parse tree
+	 */
+	void enterCallArgs(SimpleLangParser.CallArgsContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SimpleLangParser#callArgs}.
+	 * @param ctx the parse tree
+	 */
+	void exitCallArgs(SimpleLangParser.CallArgsContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link SimpleLangParser#expr}.
 	 * @param ctx the parse tree
 	 */
@@ -274,6 +274,26 @@ public interface SimpleLangListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitExpr(SimpleLangParser.ExprContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SimpleLangParser#atom}.
+	 * @param ctx the parse tree
+	 */
+	void enterAtom(SimpleLangParser.AtomContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SimpleLangParser#atom}.
+	 * @param ctx the parse tree
+	 */
+	void exitAtom(SimpleLangParser.AtomContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SimpleLangParser#binOp}.
+	 * @param ctx the parse tree
+	 */
+	void enterBinOp(SimpleLangParser.BinOpContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SimpleLangParser#binOp}.
+	 * @param ctx the parse tree
+	 */
+	void exitBinOp(SimpleLangParser.BinOpContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SimpleLangParser#initexpr}.
 	 * @param ctx the parse tree

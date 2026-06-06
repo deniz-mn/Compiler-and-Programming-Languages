@@ -31,13 +31,24 @@ module returns [main.ast.declarations.Module moduleRet]
     :
         k=KW_MODULE
         i=ID
-        { $moduleRet = new main.ast.declarations.Module(new Identifier($i.text));
-        $moduleRet.setLine($i.line); }
-        (KW_INCLUDES i1=ID { $moduleRet.addInclude(new Identifier($i1.text)); } (COMMA i2=ID { $moduleRet.addInclude(new Identifier($i2.text)); } )*)?
+        {
+            $moduleRet = new main.ast.declarations.Module(new Identifier($i.text));
+            $moduleRet.setLine($i.line);
+        }
+        (
+            KW_INCLUDES i1=ID
+            { $moduleRet.addInclude(new Identifier($i1.text)); }
+            (
+                COMMA i2=ID
+                { $moduleRet.addInclude(new Identifier($i2.text)); }
+            )*
+        )?
         KW_BEGIN
-        (m=member { $moduleRet.addMember($m.memberRet); })*
+        (
+            m=member
+            { $moduleRet.addMember($m.memberRet); }
+        )*
         KW_END
-
     ;
 
 structDef returns [Struct structRet]
@@ -174,57 +185,78 @@ block returns [Block blockRet]
 st returns [Statement statementRet]
     :
         b=block
-        { $statementRet = $b.blockRet; }
-        { $statementRet.setLine($b.blockRet.getLine()); }
-    |
-        vd=vardecl
-        { $statementRet = new VarDeclStmt($vd.varRet); }
-        SEMI
-        { $statementRet.setLine($vd.varRet.getLine()); }
-    |
-        v=vardecl
-        { $statementRet = new VarDeclStmt($v.varRet); }
-        ASSIGN
-        e=expr
-        { ((VarDeclStmt)$statementRet).setInitial($e.expressionRet); }
-        SEMI
-        { $statementRet.setLine($v.varRet.getLine()); }
-    |
-        mc=methodcall
-        { $statementRet = new MethodCallStmt($mc.methodCallRet); }
-        SEMI
-        { $statementRet.setLine($mc.methodCallRet.getLine()); }
-    |
-        ifs=ifStmt
-        { $statementRet = $ifs.ifStmtRet; }
-        { $statementRet.setLine($ifs.ifStmtRet.getLine()); }
-    |
-        fs=forStmt
-
-    |
-        ws=whileStmt
-
+        {
+            $statementRet = $b.blockRet;
+            $statementRet.setLine($b.blockRet.getLine());
+        }
     |
         as=assignStmt
-        { $statementRet = $as.assignStmtRet; }
-        { $statementRet.setLine($as.assignStmtRet.getLine()); }
+        {
+            $statementRet = $as.assignStmtRet;
+            $statementRet.setLine($as.assignStmtRet.getLine());
+        }
+    |
+        mc=methodcall SEMI
+        {
+            $statementRet = new MethodCallStmt($mc.methodCallRet);
+            $statementRet.setLine($mc.methodCallRet.getLine());
+        }
+    |
+        v=vardecl ASSIGN e=expr SEMI
+        {
+            VarDeclStmt stmt = new VarDeclStmt($v.varRet);
+            stmt.setInitial($e.expressionRet);
+            stmt.setLine($v.varRet.getLine());
+            $statementRet = stmt;
+        }
+    |
+        vd=vardecl SEMI
+        {
+            $statementRet = new VarDeclStmt($vd.varRet);
+            $statementRet.setLine($vd.varRet.getLine());
+        }
+    |
+        ifs=ifStmt
+        {
+            $statementRet = $ifs.ifStmtRet;
+            $statementRet.setLine($ifs.ifStmtRet.getLine());
+        }
     |
         rs=returnStmt
-        { $statementRet = $rs.returnStmtRet; }
-        { $statementRet.setLine($rs.returnStmtRet.getLine()); }
+        {
+            $statementRet = $rs.returnStmtRet;
+            $statementRet.setLine($rs.returnStmtRet.getLine());
+        }
     |
         is=inputStmt
-        { $statementRet = $is.inputStmtRet; }
-        { $statementRet.setLine($is.inputStmtRet.getLine()); }
+        {
+            $statementRet = $is.inputStmtRet;
+            $statementRet.setLine($is.inputStmtRet.getLine());
+        }
     |
         os=outputStmt
-        { $statementRet = $os.outputStmtRet; }
-        { $statementRet.setLine($os.outputStmtRet.getLine()); }
+        {
+            $statementRet = $os.outputStmtRet;
+            $statementRet.setLine($os.outputStmtRet.getLine());
+        }
     |
         js=jumpStmt
-        { $statementRet = $js.jumpStmtRet; }
-        { $statementRet.setLine($js.jumpStmtRet.getLine()); }
+        {
+            $statementRet = $js.jumpStmtRet;
+            $statementRet.setLine($js.jumpStmtRet.getLine());
+        }
+    |
+        fs=forStmt
+        {
+            $statementRet = new Block();
+        }
+    |
+        ws=whileStmt
+        {
+            $statementRet = new Block();
+        }
     ;
+
 jumpStmt returns [JumpStmt jumpStmtRet]
     :
         kb=KW_BREAK
@@ -313,105 +345,113 @@ loc returns [Location locationRet]
             $locationRet.setLine($k.line);
         }
         (
-        DOT i=ID
-        {
-            $locationRet = new MemberLoc(
-                new Identifier($locationRet.toString()),
-                new SimpleLoc(new Identifier($i.text))
-            );
-            $locationRet.setLine($i.line);
-        }
+            DOT i=ID
+            {
+                $locationRet = new MemberLoc(
+                    new Identifier($locationRet.toString()),
+                    new SimpleLoc(new Identifier($i.text))
+                );
+                $locationRet.setLine($i.line);
+            }
         )*
+    |
         i=ID
         {
             $locationRet = new SimpleLoc(new Identifier($i.text));
             $locationRet.setLine($i.line);
         }
         (
-        DOT j=ID
-        {
-            $locationRet = new MemberLoc(
-                new Identifier($locationRet.toString()),
-                new SimpleLoc(new Identifier($j.text))
-            );
-            $locationRet.setLine($j.line);
-        }
+            DOT j=ID
+            {
+                $locationRet = new MemberLoc(
+                    new Identifier($locationRet.toString()),
+                    new SimpleLoc(new Identifier($j.text))
+                );
+                $locationRet.setLine($j.line);
+            }
         )*
     ;
 
-receiver returns [Location locationRet]
-    :
-    k=KW_THIS
-    {
-        $locationRet = new ThisLoc();
-        $locationRet.setLine($k.line);
-    }
-    (
-        DOT i=ID
-        {
-            $locationRet = new MemberLoc(
-                new Identifier($locationRet.toString()),
-                new SimpleLoc(new Identifier($i.text))
-            );
-            $locationRet.setLine($i.line);
-        }
-    )*
-    |
-    i=ID
-    {
-        $locationRet = new SimpleLoc(new Identifier($i.text));
-        $locationRet.setLine($i.line);
-    }
-    (
-        DOT j=ID
-        {
-            $locationRet = new MemberLoc(
-                new Identifier($locationRet.toString()),
-                new SimpleLoc(new Identifier($j.text))
-            );
-            $locationRet.setLine($j.line);
-        }
-    )*
-    ;
 
 methodcall returns [MethodCall methodCallRet]
     :
-        r=receiver DOT i=ID
-        { $methodCallRet = new MethodCall($r.locationRet, new Identifier($i.text)); }
-        LPAREN
-        (e1=expr
-         { $methodCallRet.addArgument($e1.expressionRet); }
-         (COMMA e2=expr
-         { $methodCallRet.addArgument($e2.expressionRet); }
-         )*)?
-        RPAREN
-        { $methodCallRet.setLine($i.line); }
+        k=KW_THIS DOT i=ID
+        {
+            ThisLoc receiverLoc = new ThisLoc();
+            receiverLoc.setLine($k.line);
+
+            $methodCallRet = new MethodCall(receiverLoc, new Identifier($i.text));
+            $methodCallRet.setLine($i.line);
+        }
+        LPAREN args=callArgs RPAREN
+        {
+            for (Expression e : $args.argsRet) {
+                $methodCallRet.addArgument(e);
+            }
+        }
+    |
+        obj=ID DOT i=ID
+        {
+            SimpleLoc receiverLoc = new SimpleLoc(new Identifier($obj.text));
+            receiverLoc.setLine($obj.line);
+
+            $methodCallRet = new MethodCall(receiverLoc, new Identifier($i.text));
+            $methodCallRet.setLine($i.line);
+        }
+        LPAREN args=callArgs RPAREN
+        {
+            for (Expression e : $args.argsRet) {
+                $methodCallRet.addArgument(e);
+            }
+        }
     |
         i=ID
-        { $methodCallRet = new MethodCall(new Identifier($i.text)); }
-        LPAREN
-        (e1=expr
-         { $methodCallRet.addArgument($e1.expressionRet); }
-         (COMMA e2=expr
-         { $methodCallRet.addArgument($e2.expressionRet); }
-         )*)?
-        RPAREN
-        { $methodCallRet.setLine($i.line); }
+        {
+            $methodCallRet = new MethodCall(new Identifier($i.text));
+            $methodCallRet.setLine($i.line);
+        }
+        LPAREN args=callArgs RPAREN
+        {
+            for (Expression e : $args.argsRet) {
+                $methodCallRet.addArgument(e);
+            }
+        }
     ;
+
+callArgs returns [List<Expression> argsRet]
+    :
+        { $argsRet = new ArrayList<>(); }
+        (
+            e1=expr
+            { $argsRet.add($e1.expressionRet); }
+            (
+                COMMA e2=expr
+                { $argsRet.add($e2.expressionRet); }
+            )*
+        )?
+    ;
+
 
 expr returns [Expression expressionRet]
     :
-        l=loc
-        { $expressionRet = $l.locationRet; }
-    |
-        k=KW_THIS
-        {
-            $expressionRet = new ThisLoc();
-            $expressionRet.setLine($k.line);
-        }
-    |
+        a=atom
+        { $expressionRet = $a.expressionRet; }
+        (
+            op=binOp
+            b=atom
+            {
+                $expressionRet = null;
+            }
+        )*
+    ;
+
+atom returns [Expression expressionRet]
+    :
         mc=methodcall
         { $expressionRet = $mc.methodCallRet; }
+    |
+        l=loc
+        { $expressionRet = $l.locationRet; }
     |
         c=cons
         { $expressionRet = $c.constructorCallRet; }
@@ -434,45 +474,61 @@ expr returns [Expression expressionRet]
         CONSTBOOL
         { $expressionRet = null; }
     |
-        (MINUS | KW_NOT) expr
+        MINUS a=atom
         { $expressionRet = null; }
     |
-        expr (STAR | SLASH) expr
-        { $expressionRet = null; }
-    |
-        expr (PLUS | MINUS) expr
-        { $expressionRet = null; }
-    |
-        expr (LESS | GREATER | LESS_EQ | GREATER_EQ) expr
-        { $expressionRet = null; }
-    |
-        expr (EQUAL | NOT_EQUAL) expr
-        { $expressionRet = null; }
-    |
-        expr KW_AND expr
-        { $expressionRet = null; }
-    |
-        expr KW_OR expr
+        KW_NOT a=atom
         { $expressionRet = null; }
     ;
+
+binOp
+    :
+        STAR
+    |
+        SLASH
+    |
+        PLUS
+    |
+        MINUS
+    |
+        LESS
+    |
+        GREATER
+    |
+        LESS_EQ
+    |
+        GREATER_EQ
+    |
+        EQUAL
+    |
+        NOT_EQUAL
+    |
+        KW_AND
+    |
+        KW_OR
+    ;
+
 initexpr returns [Statement initExprRet]
     :
-        v1=vardecl
-        { $initExprRet = new VarDeclStmt($v1.varRet); }
-        { $initExprRet.setLine($v1.varRet.getLine()); }
+        l=loc ASSIGN e=expr
+        {
+            $initExprRet = new AssignStmt($l.locationRet, $e.expressionRet);
+            $initExprRet.setLine($l.locationRet.getLine());
+        }
     |
-        l1=loc
-        ASSIGN
-        e1=expr
-        { $initExprRet = new AssignStmt($l1.locationRet, $e1.expressionRet); }
-        { $initExprRet.setLine($l1.locationRet.getLine()); }
+        v=vardecl ASSIGN e=expr
+        {
+            VarDeclStmt stmt = new VarDeclStmt($v.varRet);
+            stmt.setInitial($e.expressionRet);
+            stmt.setLine($v.varRet.getLine());
+            $initExprRet = stmt;
+        }
     |
-        v2=vardecl
-        { $initExprRet = new VarDeclStmt($v2.varRet); }
-        ASSIGN
-        e2=expr
-        { ((VarDeclStmt)$initExprRet).setInitial($e2.expressionRet); }
-        { $initExprRet.setLine($v2.varRet.getLine()); }
+        vd=vardecl
+        {
+            $initExprRet = new VarDeclStmt($vd.varRet);
+            $initExprRet.setLine($vd.varRet.getLine());
+        }
     ;
 
 KW_MODULE   : 'module' ;

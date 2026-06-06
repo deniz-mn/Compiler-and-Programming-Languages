@@ -156,23 +156,35 @@ public interface SimpleLangVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitLoc(SimpleLangParser.LocContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SimpleLangParser#receiver}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitReceiver(SimpleLangParser.ReceiverContext ctx);
-	/**
 	 * Visit a parse tree produced by {@link SimpleLangParser#methodcall}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitMethodcall(SimpleLangParser.MethodcallContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link SimpleLangParser#callArgs}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitCallArgs(SimpleLangParser.CallArgsContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link SimpleLangParser#expr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitExpr(SimpleLangParser.ExprContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SimpleLangParser#atom}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAtom(SimpleLangParser.AtomContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SimpleLangParser#binOp}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBinOp(SimpleLangParser.BinOpContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SimpleLangParser#initexpr}.
 	 * @param ctx the parse tree
