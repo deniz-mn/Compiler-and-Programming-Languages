@@ -1,9 +1,16 @@
 package main.visitor;
 
 import main.ast.core.Program;
-import main.ast.declarations.*;
+import main.ast.declarations.Member;
+import main.ast.declarations.Method;
+import main.ast.declarations.MethodDecl;
 import main.ast.declarations.Module;
-import main.ast.statements.*;
+import main.ast.declarations.ModuleDecl;
+import main.ast.declarations.Struct;
+import main.ast.declarations.StructDecl;
+import main.ast.declarations.TopLevelDecl;
+import main.ast.declarations.Var;
+import main.ast.declarations.VarDecl;
 import main.ast.types.AccessModifier;
 
 public class PrintVisitor extends Visitor<String> {
@@ -96,7 +103,7 @@ public class PrintVisitor extends Visitor<String> {
                 + " [fields:" + fieldCount + "]");
 
         for (Member member : struct.getMembers()) {
-            if (member != null) {
+            if (member instanceof VarDecl) {
                 member.accept(this);
             }
         }
@@ -121,6 +128,7 @@ public class PrintVisitor extends Visitor<String> {
     @Override
     public String visit(MethodDecl methodDecl) {
         Method method = methodDecl.getMethod();
+
         int stmtCount = 0;
         if (method.getBody() != null && method.getBody().getStatements() != null) {
             stmtCount = method.getBody().getStatements().size();
