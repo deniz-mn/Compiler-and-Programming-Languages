@@ -1,0 +1,3902 @@
+
+
+============================================================
+/// FILE: .\src\SimpleLang.java ///
+============================================================
+
+import main.ast.core.Program;
+import main.grammar.SimpleLangLexer;
+import main.grammar.SimpleLangParser;
+import main.visitor.nameAnalyzer.NameAnalyzer;
+import main.visitor.typeAnalyzer.TypeAnalyzer;
+
+import java.io.IOException;
+
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+
+public class SimpleLang {
+    public static void main(String[] args) throws IOException {
+        if (args.length < 1) {
+            System.out.println("Please provide the input file path.");
+            return;
+        }
+
+        CharStream reader = CharStreams.fromFileName(args[0]);
+        SimpleLangLexer lexer = new SimpleLangLexer(reader);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        SimpleLangParser parser = new SimpleLangParser(tokens);
+
+        Program program = parser.program().programRet;
+
+        NameAnalyzer nameAnalyzer = new NameAnalyzer();
+        program.accept(nameAnalyzer);
+
+        TypeAnalyzer typeAnalyzer = new TypeAnalyzer();
+        program.accept(typeAnalyzer);
+    }
+}
+
+
+============================================================
+/// FILE: .\src\main\ast\core\Node.java ///
+============================================================
+
+package main.ast.core;
+
+import main.visitor.IVisitor;
+
+public abstract class Node {
+    private int line;
+
+    public Node() {}
+
+    public int getLine() {
+        return line;
+    }
+
+    public void setLine(int line) {
+        this.line = line;
+    }
+
+    public abstract <T> T accept(IVisitor<T> visitor);
+}
+
+
+============================================================
+/// FILE: .\src\main\ast\core\Program.java ///
+============================================================
+
+package main.ast.core;
+
+import main.ast.declarations.TopLevelDecl;
+import main.visitor.IVisitor;
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class Program extends Node {
+    private List<TopLevelDecl> topLevelDeclarations;
+
+    public Program() {
+        this.topLevelDeclarations = new ArrayList<>();
+    }
+
+    public void addTopLevelDeclaration(TopLevelDecl topLevelDeclaration) {
+        topLevelDeclarations.add(topLevelDeclaration);
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public List<TopLevelDecl> getTopLevelDeclarations() {
+        return topLevelDeclarations;
+    }
+
+    public void setTopLevelDeclarations(List<TopLevelDecl> topLevelDeclarations) {
+        this.topLevelDeclarations = topLevelDeclarations;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\Member.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.ast.core.Node;
+import main.ast.types.AccessModifier;
+
+public abstract class Member extends Node {
+    private AccessModifier accessModifier;
+
+    public Member() {}
+
+    public AccessModifier getAccessModifier() {
+        return accessModifier;
+    }
+
+    public void setAccessModifier(AccessModifier accessModifier) {
+        this.accessModifier = accessModifier;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\Method.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.ast.core.Node;
+import main.ast.types.Type;
+import main.ast.types.Identifier;
+import main.ast.statements.Block;
+import main.visitor.IVisitor;
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class Method extends Node {
+    private Type returnType;
+    private Identifier name;
+    private List<Parameter> parameters;
+    private Block body;
+
+    public Method(Type returnType, Identifier name, List<Parameter> parameters, Block body) {
+        this.returnType = returnType;
+        this.name = name;
+        this.parameters = new ArrayList<>(parameters);
+        this.body = body;
+    }
+
+    public void addParameter(Parameter parameter) {
+        parameters.add(parameter);
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Type getReturnType() {
+        return returnType;
+    }
+
+    public void setReturnType(Type returnType) {
+        this.returnType = returnType;
+    }
+
+    public Identifier getName() {
+        return name;
+    }
+
+    public void setName(Identifier name) {
+        this.name = name;
+    }
+
+    public List<Parameter> getParameters() {
+        return parameters;
+    }
+
+    public void setParameters(List<Parameter> parameters) {
+        this.parameters = parameters;
+    }
+
+    public Block getBody() {
+        return body;
+    }
+
+    public void setBody(Block body) {
+        this.body = body;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\MethodDecl.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.visitor.IVisitor;
+
+public class MethodDecl extends Member {
+    private Method method;
+
+    public MethodDecl() {}
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Method getMethod() {
+        return method;
+    }
+
+    public void setMethod(Method method) {
+        this.method = method;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\Module.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.ast.core.Node;
+import main.ast.types.Identifier;
+import main.visitor.IVisitor;
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class Module extends Node {
+    private Identifier name;
+    private List<Identifier> includes;
+    private List<Member> members;
+
+    public Module(Identifier name) {
+        this.name = name;
+        this.includes = new ArrayList<>();
+        this.members = new ArrayList<>();
+    }
+
+    public void addInclude(Identifier include) {
+        includes.add(include);
+    }
+
+    public void addMember(Member member) {
+        members.add(member);
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Identifier getName() {
+        return name;
+    }
+
+    public void setName(Identifier name) {
+        this.name = name;
+    }
+
+    public List<Identifier> getIncludes() {
+        return includes;
+    }
+
+    public void setIncludes(List<Identifier> includes) {
+        this.includes = includes;
+    }
+
+    public List<Member> getMembers() {
+        return members;
+    }
+
+    public void setMembers(List<Member> members) {
+        this.members = members;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\ModuleDecl.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.visitor.IVisitor;
+
+public class ModuleDecl extends TopLevelDecl {
+    private Module module;
+
+    public ModuleDecl(Module module) {
+        this.module = module;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Module getModule() {
+        return module;
+    }
+
+    public void setModule(Module module) {
+        this.module = module;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\Parameter.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.ast.core.Node;
+import main.ast.types.Type;
+import main.ast.types.Identifier;
+import main.visitor.IVisitor;
+
+public class Parameter extends Node {
+    private boolean isMutable;
+    private Type type;
+    private Identifier name;
+
+    public Parameter(boolean isMutable, Type type, Identifier name) {
+        this.isMutable = isMutable;
+        this.type = type;
+        this.name = name;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public boolean getIsMutable() {
+        return isMutable;
+    }
+
+    public void setIsMutable(boolean isMutable) {
+        this.isMutable = isMutable;
+    }
+
+    public Type getType() {
+        return type;
+    }
+
+    public void setType(Type type) {
+        this.type = type;
+    }
+
+    public Identifier getName() {
+        return name;
+    }
+
+    public void setName(Identifier name) {
+        this.name = name;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\Struct.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.ast.core.Node;
+import main.ast.types.Identifier;
+import main.visitor.IVisitor;
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class Struct extends Node {
+    private Identifier name;
+    private List<Member> members;
+
+    public Struct(Identifier name) {
+        this.name = name;
+        this.members = new ArrayList<>();
+    }
+
+    public void addMember(Member member) {
+        members.add(member);
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Identifier getName() {
+        return name;
+    }
+
+    public void setName(Identifier name) {
+        this.name = name;
+    }
+
+    public List<Member> getMembers() {
+        return members;
+    }
+
+    public void setMembers(List<Member> members) {
+        this.members = members;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\StructDecl.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.visitor.IVisitor;
+
+public class StructDecl extends TopLevelDecl {
+    private Struct struct;
+
+    public StructDecl(Struct struct) {
+        this.struct = struct;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Struct getStruct() {
+        return struct;
+    }
+
+    public void setStruct(Struct struct) {
+        this.struct = struct;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\TopLevelDecl.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.ast.core.Node;
+
+public abstract class TopLevelDecl extends Node {
+    public TopLevelDecl() {}
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\Var.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.ast.core.Node;
+import main.ast.types.Type;
+import main.ast.types.Identifier;
+import main.ast.expressions.ConstructorCall;
+import main.visitor.IVisitor;
+
+public class Var extends Node {
+    private boolean isMutable;
+    private Identifier name;
+    private Type type;
+    private ConstructorCall constructorCall;
+
+    public Var(boolean isMutable, Type type) {
+        this.isMutable = isMutable;
+        this.type = type;
+    }
+
+    public Var(boolean isMutable, ConstructorCall constructorCall) {
+        this.isMutable = isMutable;
+        this.constructorCall = constructorCall;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public boolean getIsMutable() {
+        return isMutable;
+    }
+
+    public void setIsMutable(boolean isMutable) {
+        this.isMutable = isMutable;
+    }
+
+    public Type getType() {
+        return type;
+    }
+
+    public void setType(Type type) {
+        this.type = type;
+    }
+
+    public Identifier getName() {
+        return name;
+    }
+
+    public void setName(Identifier name) {
+        this.name = name;
+    }
+
+    public ConstructorCall getConstructorCall() {
+        return constructorCall;
+    }
+
+    public void setConstructorCall(ConstructorCall constructorCall) {
+        this.constructorCall = constructorCall;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\declarations\VarDecl.java ///
+============================================================
+
+package main.ast.declarations;
+
+import main.visitor.IVisitor;
+
+public class VarDecl extends Member {
+    private Var var;
+
+    public VarDecl() {}
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Var getVar() {
+        return var;
+    }
+
+    public void setVar(Var var) {
+        this.var = var;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\BinaryExpression.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.ast.expressions.operators.*;
+import main.visitor.IVisitor;
+
+public class BinaryExpression extends Expression {
+    private Expression leftOperand;
+    private BinaryOperator Operator;
+    private Expression rightOperand;
+
+    public BinaryExpression(Expression leftOperand, String Operator, Expression rightOperand) {
+        this.leftOperand = leftOperand;
+        this.Operator = BinaryOperator.fromString(Operator);
+        this.rightOperand = rightOperand;
+    }
+
+    public Expression getLeftOperand() {
+        return leftOperand;
+    }
+
+    public void setLeftOperand(Expression leftOperand) {
+        this.leftOperand = leftOperand;
+    }
+
+    public BinaryOperator getOperator() {
+        return Operator;
+    }
+
+    public void setOperator(BinaryOperator operator) {
+        this.Operator = operator;
+    }
+
+    public Expression getRightOperand() {
+        return rightOperand;
+    }
+
+    public void setRightOperand(Expression rightOperand) {
+        this.rightOperand = rightOperand;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\ConstantExpression.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.visitor.IVisitor;
+
+public class ConstantExpression extends Expression{
+    private Object value;
+
+    public ConstantExpression(int value) {
+        this.value = value;
+    }
+
+    public ConstantExpression(float value) {
+        this.value = value;
+    }
+
+    public ConstantExpression(double value) {
+        this.value = value;
+    }
+
+    public ConstantExpression(char value) {
+        this.value = value;
+    }
+
+    public ConstantExpression(boolean value) {
+        this.value = value;
+    }
+
+    public Object getValue() {
+        return value;
+    }
+
+    public void setValue(Object value) {
+        this.value = value;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\ConstructorCall.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.ast.types.Identifier;
+import main.visitor.IVisitor;
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class ConstructorCall extends Expression {
+    private Identifier name;
+    private List<Expression> arguments;
+
+    public ConstructorCall(Identifier name) {
+        this.name = name;
+        this.arguments = new ArrayList<>();
+    }
+
+    public void addArgument(Expression argument) {
+        arguments.add(argument);
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Identifier getName() {
+        return name;
+    }
+
+    public void setName(Identifier name) {
+        this.name = name;
+    }
+
+    public List<Expression> getArguments() {
+        return arguments;
+    }
+
+    public void setArguments(List<Expression> arguments) {
+        this.arguments = arguments;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\Expression.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.ast.core.Node;
+
+public abstract class Expression extends Node {
+    public Expression() {}
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\Location.java ///
+============================================================
+
+package main.ast.expressions;
+
+public abstract class Location extends Expression {
+    public Location() {}
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\MemberLoc.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.ast.types.Identifier;
+import main.visitor.IVisitor;
+
+public class MemberLoc extends Location {
+    private Identifier memberName;
+    private Location loc;
+
+    public MemberLoc(Identifier memberName, Location loc) {
+        this.memberName = memberName;
+        this.loc = loc;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Identifier getMemberName() {
+        return memberName;
+    }
+
+    public void setMemberName(Identifier memberName) {
+        this.memberName = memberName;
+    }
+
+    public Location getLoc() {
+        return loc;
+    }
+
+    public void setLoc(Location loc) {
+        this.loc = loc;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\MethodCall.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.ast.types.Identifier;
+import main.visitor.IVisitor;
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class MethodCall extends Expression {
+    private Identifier callee;
+    private Location instance;
+    private List<Expression> arguments;
+
+    public MethodCall() {
+        this.arguments = new ArrayList<>();
+    }
+
+    public MethodCall(Identifier callee) {
+        this.callee = callee;
+        this.arguments = new ArrayList<>();
+    }
+
+    public void addArgument(Expression argument) {
+        arguments.add(argument);
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Identifier getCallee() {
+        return callee;
+    }
+
+    public void setCallee(Identifier callee) {
+        this.callee = callee;
+    }
+
+    public Location getInstance() {
+        return instance;
+    }
+
+    public void setInstance(Location instance) {
+        this.instance = instance;
+    }
+
+    public List<Expression> getArguments() {
+        return arguments;
+    }
+
+    public void setArguments(List<Expression> arguments) {
+        this.arguments = arguments;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\MethodCallLoc.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.visitor.IVisitor;
+
+public class MethodCallLoc extends Location {
+    private MethodCall methodCall;
+
+    public MethodCallLoc(MethodCall methodCall) {
+        this.methodCall = methodCall;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public MethodCall getMethodCall() {
+        return methodCall;
+    }
+
+    public void setMethodCall(MethodCall methodCall) {
+        this.methodCall = methodCall;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\ParanthesisExpr.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.visitor.IVisitor;
+
+public class ParanthesisExpr extends Expression {
+    private Expression expression;
+
+    public ParanthesisExpr(Expression expression) {
+        this.expression = expression;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Expression getExpression() {
+        return expression;
+    }
+
+    public void setExpression(Expression expression) {
+        this.expression = expression;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\SimpleLoc.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.ast.types.Identifier;
+import main.visitor.IVisitor;
+
+public class SimpleLoc extends Location {
+    private Identifier id;
+
+    public SimpleLoc(Identifier id) {
+        this.id = id;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Identifier getId() {
+        return id;
+    }
+
+    public void setId(Identifier id) {
+        this.id = id;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\ThisLoc.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.visitor.IVisitor;
+
+public class ThisLoc extends Location {
+    private Location loc;
+
+    public ThisLoc() {}
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Location getLoc() {
+        return loc;
+    }
+
+    public void setLoc(Location loc) {
+        this.loc = loc;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\UnaryExpression.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.visitor.IVisitor;
+import main.ast.expressions.operators.*;
+
+public class UnaryExpression extends Expression{
+    public UnaryExpression(String operand, Expression expression) {
+        this.expression = expression;
+        this.operand = UnaryOperator.fromString(operand);
+    }
+
+    public void setExpression(Expression expression) {
+        this.expression = expression;
+    }
+
+    UnaryOperator operand;
+
+    public Expression getExpression() {
+        return expression;
+    }
+
+    public UnaryOperator getOperand() {
+        return operand;
+    }
+
+    public void setOperand(UnaryOperator operand) {
+        this.operand = operand;
+    }
+
+    private Expression expression;
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\UnaryOpExpr.java ///
+============================================================
+
+package main.ast.expressions;
+
+import main.visitor.IVisitor;
+
+public class UnaryOpExpr extends Expression {
+    public enum Operator { NOT, MINUS }
+
+    private Operator operator;
+    private Expression operand;
+
+    public UnaryOpExpr(Operator operator, Expression operand) {
+        this.operator = operator;
+        this.operand = operand;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Operator getOperator() {
+        return operator;
+    }
+
+    public void setOperator(Operator operator) {
+        this.operator = operator;
+    }
+
+    public Expression getOperand() {
+        return operand;
+    }
+
+    public void setOperand(Expression operand) {
+        this.operand = operand;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\literals\BoolLiteral.java ///
+============================================================
+
+package main.ast.expressions.literals;
+
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+public class BoolLiteral extends Expression {
+    private boolean value;
+
+    public BoolLiteral(boolean value) {
+        this.value = value;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public boolean getValue() {
+        return value;
+    }
+
+    public void setValue(boolean value) {
+        this.value = value;
+
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\literals\CharLiteral.java ///
+============================================================
+
+package main.ast.expressions.literals;
+
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+public class CharLiteral extends Expression {
+    private char value;
+
+    public CharLiteral(char value) {
+        this.value = value;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public char getValue() {
+        return value;
+    }
+
+    public void setValue(char value) {
+        this.value = value;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\literals\DoubleLiteral.java ///
+============================================================
+
+package main.ast.expressions.literals;
+
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+public class DoubleLiteral extends Expression {
+    private double value;
+
+    public DoubleLiteral(double val) {
+        this.value = val;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public double getValue() {
+        return value;
+    }
+
+    public void setValue(double value) {
+        this.value = value;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\literals\FloatLiteral.java ///
+============================================================
+
+package main.ast.expressions.literals;
+
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+public class FloatLiteral extends Expression {
+    private double value;
+
+    public FloatLiteral(double value) {
+        this.value = value;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public double getValue() {
+        return value;
+    }
+
+    public void setValue(double value) {
+        this.value = value;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\literals\IntLiteral.java ///
+============================================================
+
+package main.ast.expressions.literals;
+
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+public class IntLiteral extends Expression {
+    private int value;
+
+    public IntLiteral(int value) {
+        this.value = value;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public int getValue() {
+        return value;
+    }
+
+    public void setValue(int value) {
+        this.value = value;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\operators\BinaryOperator.java ///
+============================================================
+
+package main.ast.expressions.operators;
+
+public enum BinaryOperator {
+    // Define the enum values with their string representations
+    MULTIPLICATION("*"),
+    DIVISION("/"),
+    ADDITION("+"),
+    SUBTRACTION("-"),
+    LESS_THAN("<"),
+    GREATER_THAN(">"),
+    LESS_THAN_OR_EQUAL_TO("<="),
+    GREATER_THAN_OR_EQUAL_TO(">="),
+    EQUALITY("=="),
+    INEQUALITY("!="),
+    AND("and"),
+    OR("or");
+
+    // Field to store the string representation
+    private final String symbol;
+
+    // Constructor to initialize the symbol
+    BinaryOperator(String symbol) {
+        this.symbol = symbol;
+    }
+
+    // Method to get the symbol
+    public String getSymbol() {
+        return this.symbol;
+    }
+
+    // Static method to get the enum by string symbol
+    public static BinaryOperator fromString(String symbol) {
+        for (BinaryOperator operator : BinaryOperator.values()) {
+            if (operator.getSymbol().equals(symbol)) {
+                return operator;
+            }
+        }
+        throw new IllegalArgumentException("Unknown operator: " + symbol);
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\expressions\operators\UnaryOperator.java ///
+============================================================
+
+package main.ast.expressions.operators;
+
+public enum UnaryOperator {
+    // Define the enum values with their string representations
+    MINUS("-"),
+    NOT("not");
+
+    // Field to store the string representation
+    private final String symbol;
+
+    // Constructor to initialize the symbol
+    UnaryOperator(String symbol) {
+        this.symbol = symbol;
+    }
+
+    // Method to get the symbol
+    public String getSymbol() {
+        return this.symbol;
+    }
+
+    // Static method to get the enum by string symbol
+    public static UnaryOperator fromString(String symbol) {
+        for (UnaryOperator operator : UnaryOperator.values()) {
+            if (operator.getSymbol().equals(symbol)) {
+                return operator;
+            }
+        }
+        throw new IllegalArgumentException("Unknown operator: " + symbol);
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\AssignStmt.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.ast.expressions.Expression;
+import main.ast.expressions.Location;
+import main.visitor.IVisitor;
+
+public class AssignStmt extends Statement {
+    private Location left;
+    private Expression right;
+
+    public AssignStmt(Location left, Expression right) {
+        this.left = left;
+        this.right = right;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Location getLeft() {
+        return left;
+    }
+
+    public void setLeft(Location left) {
+        this.left = left;
+    }
+
+    public Expression getRight() {
+        return right;
+    }
+
+    public void setRight(Expression right) {
+        this.right = right;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\Block.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.visitor.IVisitor;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Block extends Statement {
+    private List<Statement> statements;
+
+    public Block() {
+        this.statements = new ArrayList<>();
+    }
+
+    public void addStatement(Statement statement) {
+        statements.add(statement);
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public List<Statement> getStatements() {
+        return statements;
+    }
+
+    public void setStatements(List<Statement> statements) {
+        this.statements = statements;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\BreakJump.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.visitor.IVisitor;
+
+public class BreakJump extends JumpStmt {
+    public BreakJump() {}
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\ContinueJump.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.visitor.IVisitor;
+
+public class ContinueJump extends JumpStmt {
+    public ContinueJump() {}
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\ForStmt.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class ForStmt extends Statement {
+    private List<Statement> initializers;
+    private Expression condition;
+    private List<AssignStmt> updaters;
+    private Statement body;
+
+    public ForStmt() {
+        this.initializers = new ArrayList<>();
+        this.updaters = new ArrayList<>();
+    }
+
+    public void addInitializer(Statement initializer) {
+        initializers.add(initializer);
+    }
+
+    public void addUpdater(AssignStmt updater) {
+        updaters.add(updater);
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public List<Statement> getInitializers() {
+        return initializers;
+    }
+
+    public void setInitializers(List<Statement> initializers) {
+        this.initializers = initializers;
+    }
+
+    public Expression getCondition() {
+        return condition;
+    }
+
+    public void setCondition(Expression condition) {
+        this.condition = condition;
+    }
+
+    public List<AssignStmt> getUpdaters() {
+        return updaters;
+    }
+
+    public void setUpdaters(List<AssignStmt> updaters) {
+        this.updaters = updaters;
+    }
+
+    public Statement getBody() {
+        return body;
+    }
+
+    public void setBody(Statement body) {
+        this.body = body;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\IfStmt.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+public class IfStmt extends Statement {
+    private Expression condition;
+    private Statement thenBranch;
+    private Statement elseBranch;
+
+    public IfStmt(Expression condition, Statement thenBranch) {
+        this.condition = condition;
+        this.thenBranch = thenBranch;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Expression getCondition() {
+        return condition;
+    }
+
+    public void setCondition(Expression condition) {
+        this.condition = condition;
+    }
+
+    public Statement getThenBranch() {
+        return thenBranch;
+    }
+
+    public void setThenBranch(Statement thenBranch) {
+        this.thenBranch = thenBranch;
+    }
+
+    public Statement getElseBranch() {
+        return elseBranch;
+    }
+
+    public void setElseBranch(Statement elseBranch) {
+        this.elseBranch = elseBranch;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\InputStmt.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.ast.expressions.Location;
+import main.visitor.IVisitor;
+
+public class InputStmt extends Statement {
+    private Location loc;
+
+    public InputStmt(Location loc) {
+        this.loc = loc;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Location getLoc() {
+        return loc;
+    }
+
+    public void setLoc(Location loc) {
+        this.loc = loc;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\JumpStmt.java ///
+============================================================
+
+package main.ast.statements;
+
+public abstract class JumpStmt extends Statement {
+    public JumpStmt() {}
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\MethodCallStmt.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.ast.expressions.MethodCall;
+import main.visitor.IVisitor;
+
+public class MethodCallStmt extends Statement {
+    private MethodCall methodCall;
+
+    public MethodCallStmt(MethodCall methodCall) {
+        this.methodCall = methodCall;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public MethodCall getMethodCall() {
+        return methodCall;
+    }
+
+    public void setMethodCall(MethodCall methodCall) {
+        this.methodCall = methodCall;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\OutputStmt.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+public class OutputStmt extends Statement {
+    private Expression value;
+
+    public OutputStmt(Expression value) {
+        this.value = value;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Expression getValue() {
+        return value;
+    }
+
+    public void setValue(Expression value) {
+        this.value = value;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\ReturnStmt.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+public class ReturnStmt extends Statement {
+    private  Expression value;
+
+    public ReturnStmt() {}
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Expression getValue() {
+        return value;
+    }
+
+    public void setValue(Expression value) {
+        this.value = value;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\Statement.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.ast.core.Node;
+
+public abstract class Statement extends Node {
+    public Statement() {}
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\VarDeclStmt.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.ast.declarations.Var;
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+public class VarDeclStmt extends Statement {
+    private Var var;
+    private Expression initial;
+
+    public VarDeclStmt(Var var) {
+        this.var = var;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Var getVar() {
+        return var;
+    }
+
+    public void setVar(Var var) {
+        this.var = var;
+    }
+
+    public Expression getInitial() {
+        return initial;
+    }
+
+    public void setInitial(Expression initial) {
+        this.initial = initial;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\statements\WhileStmt.java ///
+============================================================
+
+package main.ast.statements;
+
+import main.ast.expressions.Expression;
+import main.visitor.IVisitor;
+
+public class WhileStmt extends Statement {
+    private Expression condition;
+    private Statement body;
+
+    public WhileStmt(Expression condition, Statement body) {
+        this.condition = condition;
+        this.body = body;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Expression getCondition() {
+        return condition;
+    }
+
+    public void setCondition(Expression condition) {
+        this.condition = condition;
+    }
+
+    public Statement getBody() {
+        return body;
+    }
+
+    public void setBody(Statement body) {
+        this.body = body;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\types\AccessModifier.java ///
+============================================================
+
+package main.ast.types;
+
+public enum AccessModifier {
+    PUBLIC, PRIVATE
+}
+
+============================================================
+/// FILE: .\src\main\ast\types\Identifier.java ///
+============================================================
+
+package main.ast.types;
+
+import main.ast.core.Node;
+import main.visitor.IVisitor;
+
+public class Identifier extends Node {
+    private String name;
+
+    public Identifier(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\types\PrimitiveType.java ///
+============================================================
+
+package main.ast.types;
+
+import main.visitor.IVisitor;
+
+public class PrimitiveType extends Type {
+    public enum Primitive { INT, FLOAT, DOUBLE, CHAR, BOOL, VOID }
+
+    private Primitive primitive;
+
+    public PrimitiveType(Primitive primitive) {
+        this.primitive = primitive;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Primitive getPrimitive() {
+        return primitive;
+    }
+
+    public void setPrimitive(Primitive primitive) {
+        this.primitive = primitive;
+    }
+
+    public String getStr() {
+        return this.primitive.toString().toLowerCase();
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\types\Type.java ///
+============================================================
+
+package main.ast.types;
+
+import main.ast.core.Node;
+
+public abstract class Type extends Node {
+    public Type() {
+    }
+
+    public String getStr() {
+        return null;
+    }
+}
+
+============================================================
+/// FILE: .\src\main\ast\types\UserDefinedType.java ///
+============================================================
+
+package main.ast.types;
+
+import main.visitor.IVisitor;
+
+public class UserDefinedType extends Type {
+    private Identifier id;
+
+    public UserDefinedType(Identifier id) {
+        this.id = id;
+    }
+
+    @Override
+    public <T> T accept(IVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    public Identifier getId() {
+        return id;
+    }
+
+    public void setId(Identifier id) {
+        this.id = id;
+    }
+
+    public String getStr() {
+        return id.getName();
+    }
+}
+
+============================================================
+/// FILE: .\src\main\grammar\SimpleLang.g4 ///
+============================================================
+
+grammar SimpleLang;
+@header {
+    package main.grammar;
+    import main.ast.core.*;
+    import main.ast.types.*;
+    import main.ast.declarations.*;
+    import main.ast.declarations.Module;
+    import main.ast.statements.*;
+    import main.ast.expressions.*;
+    import main.ast.expressions.literals.*;
+}
+
+program returns [Program programRet]
+    :
+        { $programRet = new Program(); }
+        (t=topLevelDecl { $programRet.addTopLevelDeclaration($t.topLevelDeclRet); })*
+        EOF
+    ;
+
+topLevelDecl returns [TopLevelDecl topLevelDeclRet]
+    :
+        m=module
+        { $topLevelDeclRet = new ModuleDecl($m.moduleRet); }
+    |
+        s=structDef
+        { $topLevelDeclRet = new StructDecl($s.structRet); }
+    ;
+
+module returns [Module moduleRet]
+    :
+        k=KW_MODULE
+        i=ID
+        { $moduleRet = new Module(new Identifier($i.text)); }
+        (KW_INCLUDES i1=ID { $moduleRet.addInclude(new Identifier($i1.text)); } (COMMA i2=ID { $moduleRet.addInclude(new Identifier($i2.text)); } )*)?
+        KW_BEGIN
+        (m=member { $moduleRet.addMember($m.memberRet); } )*
+        KW_END
+        { $moduleRet.setLine($k.line); }
+    ;
+
+structDef returns [Struct structRet]
+    :
+        k=KW_STRUCT
+        i=ID
+        { $structRet = new Struct(new Identifier($i.text)); }
+        KW_BEGIN
+        (m=member { $structRet.addMember($m.memberRet); } )*
+        KW_END
+        { $structRet.setLine($k.line); }
+    ;
+
+member returns [Member memberRet]
+    :
+        { $memberRet = new MethodDecl(); }
+        (a1=accessModifier { $memberRet.setAccessModifier($a1.accessModifierRet); } )?
+        m=method_decl 
+        { ((MethodDecl)$memberRet).setMethod($m.methodRet); }
+        { $memberRet.setLine($m.methodRet.getLine()); }
+    |
+        { $memberRet = new VarDecl(); }
+        (a2=accessModifier { $memberRet.setAccessModifier($a2.accessModifierRet); } )?
+        v=vardecl
+        { ((VarDecl)$memberRet).setVar($v.varRet); }
+        { $memberRet.setLine($v.varRet.getLine()); }
+        SEMI
+    ;
+
+accessModifier returns [AccessModifier accessModifierRet]
+    :
+        pr=KW_PRIVATE
+        { $accessModifierRet = AccessModifier.PRIVATE; }
+    |
+        pu=KW_PUBLIC
+        { $accessModifierRet = AccessModifier.PUBLIC; }
+    ;
+
+method_decl returns [Method methodRet]
+    :
+        t=type
+        i=ID
+        LPAREN
+        a=arguments
+        RPAREN
+        b=block
+        { $methodRet = new Method($t.typeRet, new Identifier($i.text), $a.parametersRet, $b.blockRet); }
+        { $methodRet.setLine($i.line); }
+    ;
+
+
+arguments returns [List<Parameter> parametersRet]
+    :
+        { $parametersRet = new ArrayList<>(); }
+        (p1=parameter { $parametersRet.add($p1.parameterRet); } (COMMA p2=parameter { $parametersRet.add($p2.parameterRet); } )*)?
+    ;
+
+parameter returns [Parameter parameterRet]
+    :
+        { boolean isMut = false; }
+        (KW_MUT { isMut = true; } )?
+        t=type
+        i=ID
+        { $parameterRet = new Parameter(isMut, $t.typeRet, new Identifier($i.text)); }
+        { $parameterRet.setLine($i.line); }
+    ;
+
+type returns [Type typeRet]
+    :
+        i=ID
+        { $typeRet = new UserDefinedType(new Identifier($i.text)); }
+        { $typeRet.setLine($i.line); }
+    |
+        ki=KW_INT
+        { $typeRet = new PrimitiveType(PrimitiveType.Primitive.INT); }
+        { $typeRet.setLine($ki.line); }
+    |
+        kf=KW_FLOAT
+        { $typeRet = new PrimitiveType(PrimitiveType.Primitive.FLOAT); }
+        { $typeRet.setLine($kf.line); }
+    |
+        kd=KW_DOUBLE
+        { $typeRet = new PrimitiveType(PrimitiveType.Primitive.DOUBLE); }
+        { $typeRet.setLine($kd.line); }
+    |
+        kc=KW_CHAR
+        { $typeRet = new PrimitiveType(PrimitiveType.Primitive.CHAR); }
+        { $typeRet.setLine($kc.line); }
+    |
+        kv=KW_VOID
+        { $typeRet = new PrimitiveType(PrimitiveType.Primitive.VOID); }
+        { $typeRet.setLine($kv.line); }
+    |
+        kb=KW_BOOL
+        { $typeRet = new PrimitiveType(PrimitiveType.Primitive.BOOL); }
+        { $typeRet.setLine($kb.line); }
+    ;
+
+vardecl returns [Var varRet]
+    :
+        { boolean isMut = false; }
+        (KW_MUT { isMut = true; } )?
+        (t=type { $varRet = new Var(isMut, $t.typeRet); } | c=cons { $varRet = new Var(isMut, $c.constructorCallRet); } )
+        i=ID
+        { $varRet.setName(new Identifier($i.text)); }
+        { $varRet.setLine($i.line); }
+    ;
+
+cons returns [ConstructorCall constructorCallRet]
+    :
+        i=ID
+        { $constructorCallRet = new ConstructorCall(new Identifier($i.text)); }
+        LPAREN
+        (e1=expr { $constructorCallRet.addArgument($e1.expressionRet); } (COMMA e2=expr { $constructorCallRet.addArgument($e2.expressionRet); } )*)?
+        RPAREN
+        { $constructorCallRet.setLine($i.line); }
+    ;
+
+block returns [Block blockRet]
+    :
+        { $blockRet = new Block(); }
+        k=KW_BEGIN
+        (s=st { $blockRet.addStatement($s.statementRet); } )*
+        KW_END
+        { $blockRet.setLine($k.line); }
+    ;
+
+st returns [Statement statementRet]
+    :
+        b=block
+        { $statementRet = $b.blockRet; }
+        { $statementRet.setLine($b.blockRet.getLine()); }
+    |
+        vd=vardecl
+        { $statementRet = new VarDeclStmt($vd.varRet); }
+        SEMI
+        { $statementRet.setLine($vd.varRet.getLine()); }
+    |
+        v=vardecl
+        { $statementRet = new VarDeclStmt($v.varRet); }
+        ASSIGN
+        e=expr
+        { ((VarDeclStmt)$statementRet).setInitial($e.expressionRet); }
+        SEMI
+        { $statementRet.setLine($e.expressionRet.getLine()); }
+    |
+        mc=methodcall
+        { $statementRet = new MethodCallStmt($mc.methodCallRet); }
+        SEMI
+        { $statementRet.setLine($mc.methodCallRet.getLine()); }
+    |
+        ifs=ifStmt
+        { $statementRet = $ifs.ifStmtRet; }
+        { $statementRet.setLine($ifs.ifStmtRet.getLine()); }
+    |
+        fs=forStmt
+        { $statementRet = $fs.forStmtRet; }
+        { $statementRet.setLine($fs.forStmtRet.getLine()); }
+    |
+        ws=whileStmt
+        { $statementRet = $ws.whileStmtRet; }
+        { $statementRet.setLine($ws.whileStmtRet.getLine()); }
+    |
+        as=assignStmt
+        { $statementRet = $as.assignStmtRet; }
+        { $statementRet.setLine($as.assignStmtRet.getLine()); }
+    |
+        rs=returnStmt
+        { $statementRet = $rs.returnStmtRet; }
+        { $statementRet.setLine($rs.returnStmtRet.getLine()); }
+    |
+        is=inputStmt
+        { $statementRet = $is.inputStmtRet; }
+        { $statementRet.setLine($is.inputStmtRet.getLine()); }
+    |
+        os=outputStmt
+        { $statementRet = $os.outputStmtRet; }
+        { $statementRet.setLine($os.outputStmtRet.getLine()); }
+    |
+        js=jumpStmt
+        { $statementRet = $js.jumpStmtRet; }
+        { $statementRet.setLine($js.jumpStmtRet.getLine()); }
+    ;
+jumpStmt returns [JumpStmt jumpStmtRet]
+    :
+        kb=KW_BREAK
+        { $jumpStmtRet = new BreakJump(); }
+        { $jumpStmtRet.setLine($kb.line); }
+    |
+        kc=KW_CONTINUE
+        { $jumpStmtRet = new ContinueJump(); }
+        { $jumpStmtRet.setLine($kc.line); }
+    ;
+ifStmt returns [IfStmt ifStmtRet]
+    :
+        k=KW_IF
+        LPAREN
+        e=expr
+        RPAREN
+        s1=st
+        { $ifStmtRet = new IfStmt($e.expressionRet, $s1.statementRet); }
+        (KW_ELSE s2=st { $ifStmtRet.setElseBranch($s2.statementRet); } )?
+        { $ifStmtRet.setLine($k.line); }
+    ;
+
+forStmt returns [ForStmt forStmtRet]
+    :
+        { $forStmtRet = new ForStmt(); }
+        k=KW_FOR
+        LPAREN
+        (i1=initexpr { $forStmtRet.addInitializer($i1.initExprRet); } (COMMA i2=initexpr { $forStmtRet.addInitializer($i2.initExprRet); } )*)?
+        SEMI
+        (e1=expr { $forStmtRet.setCondition($e1.expressionRet); } )?
+        SEMI
+        (l1=loc ASSIGN e2=expr { $forStmtRet.addUpdater(new AssignStmt($l1.locationRet, $e2.expressionRet)); } (COMMA l2=loc ASSIGN e3=expr { $forStmtRet.addUpdater(new AssignStmt($l2.locationRet, $e3.expressionRet)); } )*)?
+        RPAREN
+        s=st
+        { $forStmtRet.setBody($s.statementRet); }
+        { $forStmtRet.setLine($k.line); }
+    ;
+
+whileStmt returns [WhileStmt whileStmtRet]
+    :
+        k=KW_WHILE
+        LPAREN
+        e=expr
+        RPAREN
+        s=st
+        { $whileStmtRet = new WhileStmt($e.expressionRet, $s.statementRet); }
+        { $whileStmtRet.setLine($k.line); }
+    ;
+
+assignStmt returns [AssignStmt assignStmtRet]
+    :
+        l=loc
+        a=ASSIGN
+        e=expr
+        { $assignStmtRet = new AssignStmt($l.locationRet, $e.expressionRet); }
+        SEMI
+        { $assignStmtRet.setLine($a.line); }
+    ;
+
+returnStmt returns [ReturnStmt returnStmtRet]
+    :
+        { $returnStmtRet = new ReturnStmt(); }
+        k=KW_RETURN
+        (e=expr { $returnStmtRet.setValue($e.expressionRet); } )?
+        SEMI
+        { $returnStmtRet.setLine($k.line); }
+    ;
+
+inputStmt returns [InputStmt inputStmtRet]
+    :
+        k=KW_INPUT
+        l=loc
+        { $inputStmtRet = new InputStmt($l.locationRet); }
+        SEMI
+        { $inputStmtRet.setLine($k.line); }
+    ;
+
+outputStmt returns [OutputStmt outputStmtRet]
+    :
+        k=KW_OUTPUT
+        e=expr
+        { $outputStmtRet = new OutputStmt($e.expressionRet); }
+        SEMI
+        { $outputStmtRet.setLine($k.line); }
+    ;
+
+loc returns [Location locationRet]
+    :
+        s=simpleLoc
+        { $locationRet = $s.simpleLocRet; }
+        { $locationRet.setLine($s.simpleLocRet.getLine()); }
+    |
+        m=memberLoc
+        { $locationRet = $m.memberLocRet; }
+        { $locationRet.setLine($m.memberLocRet.getLine()); }
+    |
+        t=thisLoc
+        { $locationRet = $t.thisLocRet; }
+        { $locationRet.setLine($t.thisLocRet.getLine()); }
+    ;
+
+simpleLoc returns [SimpleLoc simpleLocRet]
+    :
+        i=ID
+        { $simpleLocRet = new SimpleLoc(new Identifier($i.text)); }
+        { $simpleLocRet.setLine($i.line); }
+    ;
+
+memberLoc returns [MemberLoc memberLocRet]
+    :
+        i=ID
+        DOT
+        l=loc
+        { $memberLocRet = new MemberLoc(new Identifier($i.text), $l.locationRet); }
+        { $memberLocRet.setLine($i.line); }
+    ;
+
+
+thisLoc returns [ThisLoc thisLocRet]
+    :
+        { $thisLocRet = new ThisLoc(); }
+        k=KW_THIS
+        (DOT l=loc { $thisLocRet.setLoc($l.locationRet); } )?
+        { $thisLocRet.setLine($k.line); }
+    ;
+
+methodcall returns [MethodCall methodCallRet]
+    :
+        { $methodCallRet = new MethodCall(); }
+        (l=loc DOT {
+            $methodCallRet.setInstance($l.locationRet); })?
+        i=ID
+        { $methodCallRet.setCallee(new Identifier($i.text)); }
+
+        LPAREN
+        (e1=expr { $methodCallRet.addArgument($e1.expressionRet); } (COMMA e2=expr { $methodCallRet.addArgument($e2.expressionRet); } )*)?
+        RPAREN
+        { $methodCallRet.setLine($i.line); }
+    ;
+
+expr returns[Expression expressionRet]
+    :
+        l=loc
+        { $expressionRet = $l.locationRet; }
+        { $expressionRet.setLine($l.locationRet.getLine()); }
+    |
+        k=KW_THIS
+        { $expressionRet = new ThisLoc(); }
+        { $expressionRet.setLine($k.line); }
+    |
+        mc=methodcall
+        { $expressionRet = $mc.methodCallRet; }
+        { $expressionRet.setLine($mc.methodCallRet.getLine()); }
+    |
+        c=cons
+        { $expressionRet = $c.constructorCallRet; }
+        { $expressionRet.setLine($c.constructorCallRet.getLine()); }
+    |
+        LPAREN e=expr RPAREN
+        { $expressionRet = $e.expressionRet; }
+        { $expressionRet.setLine($e.expressionRet.getLine()); }
+    |
+        ci=CONSTINT
+        { $expressionRet = new ConstantExpression(Integer.parseInt($ci.text)); }
+        { $expressionRet.setLine($ci.line); }
+    |
+        cf=CONSTFLOAT
+        { $expressionRet = new ConstantExpression(Float.parseFloat($cf.text)); }
+        { $expressionRet.setLine($cf.line); }
+    |
+        cd=CONSTDOUBLE
+        { $expressionRet = new ConstantExpression(Double.parseDouble($cd.text)); }
+        { $expressionRet.setLine($cd.line); }
+    |
+        cc=CONSTCHAR
+        { $expressionRet = new ConstantExpression($cc.text.charAt(1)); }
+        { $expressionRet.setLine($cc.line); }
+    |
+        cb=CONSTBOOL
+        { $expressionRet = new ConstantExpression(Boolean.parseBoolean($cb.text)); }
+        { $expressionRet.setLine($cb.line); }
+    |
+        op1=(MINUS | KW_NOT) e1=expr
+        { $expressionRet = new UnaryExpression($op1.text, $e1.expressionRet); }
+        { $expressionRet.setLine($op1.line); }
+    |
+        e2=expr op2=(STAR | SLASH) e3=expr
+        { $expressionRet = new BinaryExpression($e2.expressionRet, $op2.text, $e3.expressionRet); }
+        { $expressionRet.setLine($op2.line); }
+    |
+        e4=expr op3=(PLUS | MINUS) e5=expr
+        { $expressionRet = new BinaryExpression($e4.expressionRet, $op3.text, $e5.expressionRet); }
+        { $expressionRet.setLine($op3.line); }
+    |
+        e6=expr op4=(LESS | GREATER | LESS_EQ | GREATER_EQ) e7=expr
+        { $expressionRet = new BinaryExpression($e6.expressionRet, $op4.text, $e7.expressionRet); }
+        { $expressionRet.setLine($op4.line); }
+    |
+        e8=expr op5=(EQUAL | NOT_EQUAL) e9=expr
+        { $expressionRet = new BinaryExpression($e8.expressionRet, $op5.text, $e9.expressionRet); }
+        { $expressionRet.setLine($op5.line); }
+    |
+        e10=expr op6=KW_AND e11=expr
+        { $expressionRet = new BinaryExpression($e10.expressionRet, $op6.text, $e11.expressionRet); }
+        { $expressionRet.setLine($op6.line); }
+    |
+        e12=expr op7=KW_OR e13=expr
+        { $expressionRet = new BinaryExpression($e12.expressionRet, $op7.text, $e13.expressionRet); }
+        { $expressionRet.setLine($op7.line); }
+    ;
+initexpr returns [Statement initExprRet]
+    :
+        v1=vardecl
+        { $initExprRet = new VarDeclStmt($v1.varRet); }
+        { $initExprRet.setLine($v1.varRet.getLine()); }
+    |
+        l1=loc
+        ASSIGN
+        e1=expr
+        { $initExprRet = new AssignStmt($l1.locationRet, $e1.expressionRet); }
+        { $initExprRet.setLine($l1.locationRet.getLine()); }
+    |
+        v2=vardecl
+        { $initExprRet = new VarDeclStmt($v2.varRet); }
+        ASSIGN
+        e2=expr
+        { ((VarDeclStmt)$initExprRet).setInitial($e2.expressionRet); }
+        { $initExprRet.setLine($v2.varRet.getLine()); }
+    ;
+
+KW_MODULE   : 'module' ;
+KW_STRUCT   : 'struct' ;
+KW_INCLUDES : 'includes' ;
+KW_BEGIN    : 'begin' ;
+KW_END      : 'end' ;
+KW_PUBLIC   : 'public' ;
+KW_PRIVATE  : 'private' ;
+KW_INT      : 'int' ;
+KW_FLOAT    : 'float' ;
+KW_DOUBLE   : 'double' ;
+KW_CHAR     : 'char' ;
+KW_VOID     : 'void' ;
+KW_IF       : 'if' ;
+KW_ELSE     : 'else' ;
+KW_FOR      : 'for' ;
+KW_WHILE    : 'while' ;
+KW_DO       : 'do' ;
+KW_RETURN   : 'return' ;
+KW_INPUT    : 'input' ;
+KW_OUTPUT   : 'output' ;
+KW_THIS     : 'this' ;
+KW_NOT      : 'not' ;
+KW_AND      : 'and' ;
+KW_OR       : 'or' ;
+KW_MUT      : 'mut' ;
+KW_BREAK    : 'break' ;
+KW_CONTINUE : 'continue' ;
+KW_BOOL     : 'bool' ;
+CONSTBOOL   : 'true' | 'false' ;
+
+SEMI        : ';' ;
+COMMA       : ',' ;
+LPAREN      : '(' ;
+RPAREN      : ')' ;
+LBRACK      : '[' ;
+RBRACK      : ']' ;
+ASSIGN      : '=' ;
+DOT         : '.' ;
+ARROW       : '->' ;
+MINUS       : '-' ;
+PLUS        : '+' ;
+STAR        : '*' ;
+SLASH       : '/' ;
+AMPERSAND   : '&' ;
+LESS        : '<' ;
+GREATER     : '>' ;
+LESS_EQ     : '<=' ;
+GREATER_EQ  : '>=' ;
+EQUAL       : '==' ;
+NOT_EQUAL   : '!=' ;
+
+CONSTINT    : DIGIT+ ;
+CONSTFLOAT  : DIGIT+ DOT DIGIT+ ;
+CONSTDOUBLE : DIGIT+ DOT DIGIT+ EXPONENT SIGN? DIGIT+ ;
+CONSTCHAR   : '\'' . '\'' ;
+
+ID          : LETTER (LETTER | DIGIT | '_')* ;
+
+fragment LETTER   : [a-zA-Z] ;
+fragment DIGIT    : [0-9] ;
+fragment EXPONENT : [eE] ;
+fragment SIGN     : [+\-] ;
+
+WS          : [ \t\r\n]+ -> skip ;
+COMMENT     : '%%' ~[\r\n]* -> skip ;
+MULTICOMMENT: '%%%' .*? '%%%' -> skip ;
+
+============================================================
+/// FILE: .\src\main\symbolTable\SymbolTable.java ///
+============================================================
+
+package main.symbolTable;
+
+import main.symbolTable.exceptions.ItemAlreadyExistsException;
+import main.symbolTable.exceptions.ItemNotFoundException;
+import main.symbolTable.items.SymbolTableItem;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class SymbolTable {
+    public SymbolTable pre;
+    private Map<String, SymbolTableItem> items;
+
+    public static SymbolTable top;
+    public static SymbolTable root;
+
+    public SymbolTable() {
+        this(null);
+    }
+
+    public SymbolTable(SymbolTable pre) {
+        this.pre = pre;
+        this.items = new HashMap<>();
+    }
+
+    public void put(SymbolTableItem item) throws ItemAlreadyExistsException {
+        if (items.containsKey(item.getName())) {
+            throw new ItemAlreadyExistsException();
+        }
+        items.put(item.getName(), item);
+    }
+
+    public SymbolTableItem getInCurrentScope(String key) throws ItemNotFoundException {
+        SymbolTableItem item = items.get(key);
+        if (item == null) {
+            throw new ItemNotFoundException();
+        }
+        return item;
+    }
+
+    public SymbolTableItem get(String key) throws ItemNotFoundException {
+        SymbolTableItem item = items.get(key);
+        if (item != null) {
+            return item;
+        }
+        if (pre != null) {
+            return pre.get(key);
+        }
+        throw new ItemNotFoundException();
+    }
+
+    public static void push(SymbolTable symbolTable) {
+        if (top != null) {
+            symbolTable.pre = top;
+        }
+        top = symbolTable;
+    }
+
+    public static void pop() {
+        if (top != null) {
+            top = top.pre;
+        }
+    }
+}
+
+
+============================================================
+/// FILE: .\src\main\symbolTable\exceptions\ItemAlreadyExistsException.java ///
+============================================================
+
+package main.symbolTable.exceptions;
+
+public class ItemAlreadyExistsException extends Exception {
+}
+
+
+============================================================
+/// FILE: .\src\main\symbolTable\exceptions\ItemNotFoundException.java ///
+============================================================
+
+package main.symbolTable.exceptions;
+
+public class ItemNotFoundException extends Exception {
+}
+
+
+============================================================
+/// FILE: .\src\main\symbolTable\items\MethodItem.java ///
+============================================================
+
+package main.symbolTable.items;
+
+import main.ast.types.Type;
+
+import java.util.ArrayList;
+
+public class MethodItem extends SymbolTableItem {
+    private Type returnType;
+    private ArrayList<Type> parameterTypes;
+    private String visibility;
+
+    public MethodItem(String name, Type returnType, String visibility) {
+        this.name = name;
+        this.returnType = returnType;
+        this.parameterTypes = new ArrayList<>();
+        this.visibility = visibility == null ? "public" : visibility;
+    }
+
+    public void addParameterType(Type type) {
+        parameterTypes.add(type);
+    }
+
+    @Override
+    public SymbolKind getKind() {
+        return SymbolKind.METHOD;
+    }
+
+    @Override
+    public Type getReturnType() {
+        return returnType;
+    }
+
+    @Override
+    public ArrayList<Type> getParameterTypes() {
+        return parameterTypes;
+    }
+
+    @Override
+    public String getVisibility() {
+        return visibility;
+    }
+}
+
+
+============================================================
+/// FILE: .\src\main\symbolTable\items\ModuleItem.java ///
+============================================================
+
+package main.symbolTable.items;
+
+import main.symbolTable.SymbolTable;
+
+public class ModuleItem extends SymbolTableItem {
+    private SymbolTable moduleSymbolTable;
+
+    public ModuleItem(String name) {
+        this.name = name;
+        this.moduleSymbolTable = new SymbolTable();
+    }
+
+    @Override
+    public SymbolKind getKind() {
+        return SymbolKind.MODULE;
+    }
+
+    @Override
+    public SymbolTable getInnerSymbolTable() {
+        return moduleSymbolTable;
+    }
+
+    public SymbolTable getModuleSymbolTable() {
+        return moduleSymbolTable;
+    }
+}
+
+
+============================================================
+/// FILE: .\src\main\symbolTable\items\StructItem.java ///
+============================================================
+
+package main.symbolTable.items;
+
+import main.symbolTable.SymbolTable;
+
+public class StructItem extends SymbolTableItem {
+    private SymbolTable structSymbolTable;
+
+    public StructItem(String name) {
+        this.name = name;
+        this.structSymbolTable = new SymbolTable();
+    }
+
+    @Override
+    public SymbolKind getKind() {
+        return SymbolKind.STRUCT;
+    }
+
+    @Override
+    public SymbolTable getInnerSymbolTable() {
+        return structSymbolTable;
+    }
+
+    public SymbolTable getStructSymbolTable() {
+        return structSymbolTable;
+    }
+}
+
+
+============================================================
+/// FILE: .\src\main\symbolTable\items\SymbolKind.java ///
+============================================================
+
+package main.symbolTable.items;
+
+public enum SymbolKind {
+    MODULE,
+    STRUCT,
+    METHOD,
+    VARIABLE
+}
+
+
+============================================================
+/// FILE: .\src\main\symbolTable\items\SymbolTableItem.java ///
+============================================================
+
+package main.symbolTable.items;
+
+import main.ast.types.Type;
+import main.symbolTable.SymbolTable;
+
+import java.util.ArrayList;
+
+public abstract class SymbolTableItem {
+    protected String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public SymbolKind getKind() {
+        return null;
+    }
+
+    public Type getType() {
+        return null;
+    }
+
+    public Type getReturnType() {
+        return null;
+    }
+
+    public ArrayList<Type> getParameterTypes() {
+        return new ArrayList<>();
+    }
+
+    public boolean isMut() {
+        return false;
+    }
+
+    public boolean isInitialized() {
+        return true;
+    }
+
+    public void setInitialized(boolean initialized) {
+    }
+
+    public String getVisibility() {
+        return "public";
+    }
+
+    public SymbolTable getInnerSymbolTable() {
+        return null;
+    }
+}
+
+
+============================================================
+/// FILE: .\src\main\symbolTable\items\VarItem.java ///
+============================================================
+
+package main.symbolTable.items;
+
+import main.ast.types.Type;
+
+public class VarItem extends SymbolTableItem {
+    private Type type;
+    private boolean isMut;
+    private boolean isInitialized;
+    private String visibility;
+
+    public VarItem(String name, Type type, boolean isMut, String visibility) {
+        this.name = name;
+        this.type = type;
+        this.isMut = isMut;
+        this.isInitialized = false;
+        this.visibility = visibility == null ? "public" : visibility;
+    }
+
+    @Override
+    public SymbolKind getKind() {
+        return SymbolKind.VARIABLE;
+    }
+
+    @Override
+    public Type getType() {
+        return type;
+    }
+
+    @Override
+    public boolean isMut() {
+        return isMut;
+    }
+
+    @Override
+    public boolean isInitialized() {
+        return isInitialized;
+    }
+
+    @Override
+    public void setInitialized(boolean initialized) {
+        isInitialized = initialized;
+    }
+
+    @Override
+    public String getVisibility() {
+        return visibility;
+    }
+}
+
+
+============================================================
+/// FILE: .\src\main\visitor\IVisitor.java ///
+============================================================
+
+package main.visitor;
+
+import main.ast.core.*;
+import main.ast.declarations.Module;
+import main.ast.types.*;
+import main.ast.declarations.*;
+import main.ast.statements.*;
+import main.ast.expressions.*;
+import main.ast.expressions.literals.*;
+
+public interface IVisitor<T> {
+    T visit(Program program);
+
+    T visit(Module module);
+
+    T visit(ModuleDecl moduleDecl);
+
+    T visit(Struct struct);
+
+    T visit(StructDecl structDecl);
+
+    T visit(Method method);
+
+    T visit(MethodDecl methodDecl);
+
+    T visit(Parameter parameter);
+
+    T visit(Var var);
+
+    T visit(VarDecl varDecl);
+
+    T visit(Block block);
+
+    T visit(VarDeclStmt varDeclStmt);
+
+    T visit(AssignStmt assignStmt);
+
+    T visit(MethodCallStmt methodCallStmt);
+
+    T visit(ReturnStmt returnStmt);
+
+    T visit(IfStmt ifStmt);
+
+    T visit(ForStmt forStmt);
+
+    T visit(WhileStmt whileStmt);
+
+    T visit(BreakJump breakJump);
+
+    T visit(ContinueJump continueJump);
+
+    T visit(InputStmt inputStmt);
+
+    T visit(OutputStmt outputStmt);
+
+    T visit(MethodCall methodCall);
+
+    T visit(ConstructorCall constructorCall);
+
+    T visit(SimpleLoc simpleLoc);
+
+    T visit(MemberLoc memberLoc);
+
+    T visit(ThisLoc thisLoc);
+
+    T visit(MethodCallLoc methodCallLoc);
+
+    T visit(ParanthesisExpr paranthesisExpr);
+
+    T visit(UnaryOpExpr unaryOpExpr);
+
+    T visit(BinaryExpression binaryOpExpr);
+
+    T visit(IntLiteral intLiteral);
+
+    T visit(FloatLiteral floatLiteral);
+
+    T visit(DoubleLiteral doubleLiteral);
+
+    T visit(CharLiteral charLiteral);
+
+    T visit(BoolLiteral boolLiteral);
+
+    T visit(Identifier identifier);
+
+    T visit(PrimitiveType primitiveType);
+    T visit(UnaryExpression unaryExpression);
+    T visit(ConstantExpression constantExpression);
+
+
+    T visit(UserDefinedType userDefinedType);
+}
+
+============================================================
+/// FILE: .\src\main\visitor\Visitor.java ///
+============================================================
+
+package main.visitor;
+
+import main.ast.core.*;
+import main.ast.declarations.Module;
+import main.ast.types.*;
+import main.ast.declarations.*;
+import main.ast.statements.*;
+import main.ast.expressions.*;
+import main.ast.expressions.literals.*;
+
+public abstract class Visitor<T> implements IVisitor<T> {
+    @Override
+    public T visit(Program program) { return null; }
+
+    @Override
+    public T visit(Module module) { return null; }
+
+    @Override
+    public T visit(ModuleDecl moduleDecl) { return null; }
+
+    @Override
+    public T visit(Struct struct) { return null; }
+
+    @Override
+    public T visit(StructDecl structDecl) { return null; }
+
+    @Override
+    public T visit(Method method) { return null; }
+
+    @Override
+    public T visit(MethodDecl methodDecl) { return null; }
+
+    @Override
+    public T visit(Parameter parameter) { return null; }
+
+    @Override
+    public T visit(Var var) { return null; }
+
+    @Override
+    public T visit(VarDecl varDecl) { return null; }
+
+    @Override
+    public T visit(Block block) { return null; }
+
+    @Override
+    public T visit(VarDeclStmt varDeclStmt) { return null; }
+
+    @Override
+    public T visit(AssignStmt assignStmt) { return null; }
+
+    @Override
+    public T visit(MethodCallStmt methodCallStmt) { return null; }
+
+    @Override
+    public T visit(ReturnStmt returnStmt) { return null; }
+
+    @Override
+    public T visit(IfStmt ifStmt) { return null; }
+
+    @Override
+    public T visit(ForStmt forStmt) { return null; }
+
+    @Override
+    public T visit(WhileStmt whileStmt) { return null; }
+
+    @Override
+    public T visit(BreakJump breakJump) { return null; }
+
+    @Override
+    public T visit(ContinueJump continueJump) { return null; }
+
+    @Override
+    public T visit(InputStmt inputStmt) { return null; }
+
+    @Override
+    public T visit(OutputStmt outputStmt) { return null; }
+
+    @Override
+    public T visit(MethodCall methodCall) { return null; }
+
+    @Override
+    public T visit(ConstructorCall constructorCall) { return null; }
+
+    @Override
+    public T visit(SimpleLoc simpleLoc) { return null; }
+
+    @Override
+    public T visit(MemberLoc memberLoc) { return null; }
+
+    @Override
+    public T visit(ThisLoc thisLoc) { return null; }
+
+    @Override
+    public T visit(MethodCallLoc methodCallLoc) { return null; }
+
+    @Override
+    public T visit(ParanthesisExpr paranthesisExpr) { return null; }
+
+    @Override
+    public T visit(UnaryOpExpr unaryOpExpr) { return null; }
+
+    @Override
+    public T visit(BinaryExpression binaryOpExpr) { return null; }
+
+    @Override
+    public T visit(IntLiteral intLiteral) { return null; }
+
+    @Override
+    public T visit(FloatLiteral floatLiteral) { return null; }
+
+    @Override
+    public T visit(DoubleLiteral doubleLiteral) { return null; }
+
+    @Override
+    public T visit(CharLiteral charLiteral) { return null; }
+
+    @Override
+    public T visit(BoolLiteral boolLiteral) { return null; }
+
+    @Override
+    public T visit(Identifier identifier) { return null; }
+
+    @Override
+    public T visit(PrimitiveType primitiveType) { return null; }
+
+    @Override
+    public T visit(UserDefinedType userDefinedType) { return null; }
+
+    @Override
+    public T visit(UnaryExpression unaryExpression) { return null; }
+    @Override
+    public T visit(ConstantExpression constantExpression) { return null; }
+}
+
+============================================================
+/// FILE: .\src\main\visitor\nameAnalyzer\NameAnalyzer.java ///
+============================================================
+
+package main.visitor.nameAnalyzer;
+
+import main.ast.core.Program;
+import main.ast.declarations.*;
+import main.ast.declarations.Module;
+import main.ast.expressions.*;
+import main.ast.statements.*;
+import main.ast.types.*;
+import main.symbolTable.SymbolTable;
+import main.symbolTable.exceptions.ItemAlreadyExistsException;
+import main.symbolTable.exceptions.ItemNotFoundException;
+import main.symbolTable.items.*;
+import main.visitor.Visitor;
+
+import java.util.*;
+
+public class NameAnalyzer extends Visitor<Void> {
+    private enum Phase { DECLARE_TOP_LEVELS, DECLARE_MEMBERS, ANALYZE_BODIES }
+
+    private Phase phase;
+    private String currentOwnerName;
+    private String currentAccess;
+    private boolean leftSideOfAssignment;
+    private final Map<String, Set<String>> dependencies = new HashMap<>();
+    private final Map<String, Integer> declarationLines = new HashMap<>();
+
+    @Override
+    public Void visit(Program program) {
+        SymbolTable.root = new SymbolTable();
+        SymbolTable.top = null;
+        SymbolTable.push(SymbolTable.root);
+
+        phase = Phase.DECLARE_TOP_LEVELS;
+        for (TopLevelDecl decl : program.getTopLevelDeclarations()) {
+            decl.accept(this);
+        }
+
+        phase = Phase.DECLARE_MEMBERS;
+        for (TopLevelDecl decl : program.getTopLevelDeclarations()) {
+            decl.accept(this);
+        }
+
+        phase = Phase.ANALYZE_BODIES;
+        for (TopLevelDecl decl : program.getTopLevelDeclarations()) {
+            decl.accept(this);
+        }
+
+        printUnreachableWarnings(program);
+        SymbolTable.pop();
+        return null;
+    }
+
+    @Override
+    public Void visit(ModuleDecl moduleDecl) {
+        Module module = moduleDecl.getModule();
+        String name = module.getName().getName();
+
+        if (phase == Phase.DECLARE_TOP_LEVELS) {
+            declarationLines.put(name, module.getLine());
+            dependencies.putIfAbsent(name, new HashSet<>());
+            try {
+                SymbolTable.root.put(new ModuleItem(name));
+            } catch (ItemAlreadyExistsException e) {
+                System.out.println("Line " + module.getLine() + " : " + name + " already defined");
+            }
+            return null;
+        }
+
+        SymbolTableItem item = getRootItem(name);
+        if (item == null) {
+            return null;
+        }
+
+        currentOwnerName = name;
+        SymbolTable.push(item.getInnerSymbolTable());
+
+        if (phase == Phase.DECLARE_MEMBERS) {
+            for (Identifier include : module.getIncludes()) {
+                dependencies.get(name).add(include.getName());
+                if (getRootItem(include.getName()) == null) {
+                    System.out.println("Line " + include.getLine() + " : " + include.getName() + " not declared");
+                }
+            }
+            for (Member member : module.getMembers()) {
+                member.accept(this);
+            }
+        } else {
+            for (Member member : module.getMembers()) {
+                member.accept(this);
+            }
+        }
+
+        SymbolTable.pop();
+        currentOwnerName = null;
+        return null;
+    }
+
+    @Override
+    public Void visit(StructDecl structDecl) {
+        Struct struct = structDecl.getStruct();
+        String name = struct.getName().getName();
+
+        if (phase == Phase.DECLARE_TOP_LEVELS) {
+            declarationLines.put(name, struct.getLine());
+            dependencies.putIfAbsent(name, new HashSet<>());
+            try {
+                SymbolTable.root.put(new StructItem(name));
+            } catch (ItemAlreadyExistsException e) {
+                System.out.println("Line " + struct.getLine() + " : " + name + " already defined");
+            }
+            return null;
+        }
+
+        SymbolTableItem item = getRootItem(name);
+        if (item == null) {
+            return null;
+        }
+
+        currentOwnerName = name;
+        SymbolTable.push(item.getInnerSymbolTable());
+        for (Member member : struct.getMembers()) {
+            member.accept(this);
+        }
+        SymbolTable.pop();
+        currentOwnerName = null;
+        return null;
+    }
+
+    @Override
+    public Void visit(MethodDecl methodDecl) {
+        currentAccess = accessToString(methodDecl.getAccessModifier());
+        methodDecl.getMethod().accept(this);
+        currentAccess = null;
+        return null;
+    }
+
+    @Override
+    public Void visit(VarDecl varDecl) {
+        currentAccess = accessToString(varDecl.getAccessModifier());
+        if (phase == Phase.DECLARE_MEMBERS) {
+            declareVariable(varDecl.getVar(), currentAccess, false);
+        }
+        currentAccess = null;
+        return null;
+    }
+
+    @Override
+    public Void visit(Method method) {
+        String name = method.getName().getName();
+        if (phase == Phase.DECLARE_MEMBERS) {
+            MethodItem item = new MethodItem(name, method.getReturnType(), currentAccess);
+            for (Parameter parameter : method.getParameters()) {
+                item.addParameterType(parameter.getType());
+            }
+            try {
+                SymbolTable.top.put(item);
+            } catch (ItemAlreadyExistsException e) {
+                System.out.println("Line " + method.getLine() + " : " + name + " already defined");
+            }
+            return null;
+        }
+
+        if (phase == Phase.ANALYZE_BODIES) {
+            SymbolTable methodScope = new SymbolTable();
+            SymbolTable.push(methodScope);
+            for (Parameter parameter : method.getParameters()) {
+                VarItem paramItem = new VarItem(parameter.getName().getName(), parameter.getType(), parameter.getIsMutable(), "public");
+                paramItem.setInitialized(true);
+                try {
+                    SymbolTable.top.put(paramItem);
+                } catch (ItemAlreadyExistsException e) {
+                    System.out.println("Line " + parameter.getLine() + " : " + parameter.getName().getName() + " already defined");
+                }
+            }
+            method.getBody().accept(this);
+            SymbolTable.pop();
+        }
+        return null;
+    }
+
+    @Override
+    public Void visit(Block block) {
+        SymbolTable.push(new SymbolTable());
+        for (Statement statement : block.getStatements()) {
+            statement.accept(this);
+        }
+        SymbolTable.pop();
+        return null;
+    }
+
+    @Override
+    public Void visit(VarDeclStmt stmt) {
+        VarItem item = declareVariable(stmt.getVar(), "public", stmt.getInitial() != null || stmt.getVar().getConstructorCall() != null);
+        if (stmt.getVar().getConstructorCall() != null) {
+            stmt.getVar().getConstructorCall().accept(this);
+        }
+        if (stmt.getInitial() != null) {
+            stmt.getInitial().accept(this);
+            if (item != null) {
+                item.setInitialized(true);
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public Void visit(AssignStmt stmt) {
+        stmt.getRight().accept(this);
+        leftSideOfAssignment = true;
+        SymbolTableItem item = stmt.getLeft().accept(new LocationItemVisitor());
+        leftSideOfAssignment = false;
+        if (item != null && item.getKind() == SymbolKind.VARIABLE) {
+            item.setInitialized(true);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visit(MethodCallStmt stmt) {
+        stmt.getMethodCall().accept(this);
+        return null;
+    }
+
+    @Override
+    public Void visit(MethodCall methodCall) {
+        SymbolTableItem methodItem = resolveMethod(methodCall);
+        if (methodItem == null) {
+            System.out.println("Line " + methodCall.getLine() + " : " + methodCall.getCallee().getName() + " not declared");
+        }
+        for (Expression argument : methodCall.getArguments()) {
+            argument.accept(this);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visit(ConstructorCall constructorCall) {
+        String typeName = constructorCall.getName().getName();
+        if (getRootItem(typeName) == null) {
+            System.out.println("Line " + constructorCall.getLine() + " : " + typeName + " not declared");
+        } else {
+            addDependency(typeName);
+        }
+        for (Expression arg : constructorCall.getArguments()) {
+            arg.accept(this);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visit(SimpleLoc simpleLoc) {
+        simpleLoc.accept(new LocationItemVisitor());
+        return null;
+    }
+
+    @Override
+    public Void visit(MemberLoc memberLoc) {
+        memberLoc.accept(new LocationItemVisitor());
+        return null;
+    }
+
+    @Override
+    public Void visit(ThisLoc thisLoc) {
+        if (thisLoc.getLoc() != null) {
+            thisLoc.getLoc().accept(this);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visit(BinaryExpression expr) {
+        expr.getLeftOperand().accept(this);
+        expr.getRightOperand().accept(this);
+        return null;
+    }
+
+    @Override
+    public Void visit(UnaryExpression expr) {
+        expr.getExpression().accept(this);
+        return null;
+    }
+
+    @Override
+    public Void visit(ParanthesisExpr expr) {
+        expr.getExpression().accept(this);
+        return null;
+    }
+
+    @Override
+    public Void visit(IfStmt stmt) {
+        stmt.getCondition().accept(this);
+        stmt.getThenBranch().accept(this);
+        if (stmt.getElseBranch() != null) {
+            stmt.getElseBranch().accept(this);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visit(WhileStmt stmt) {
+        stmt.getCondition().accept(this);
+        stmt.getBody().accept(this);
+        return null;
+    }
+
+    @Override
+    public Void visit(ForStmt stmt) {
+        SymbolTable.push(new SymbolTable());
+        for (Statement initializer : stmt.getInitializers()) {
+            initializer.accept(this);
+        }
+        if (stmt.getCondition() != null) {
+            stmt.getCondition().accept(this);
+        }
+        for (AssignStmt updater : stmt.getUpdaters()) {
+            updater.accept(this);
+        }
+        stmt.getBody().accept(this);
+        SymbolTable.pop();
+        return null;
+    }
+
+    @Override
+    public Void visit(ReturnStmt stmt) {
+        if (stmt.getValue() != null) {
+            stmt.getValue().accept(this);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visit(InputStmt stmt) {
+        leftSideOfAssignment = true;
+        SymbolTableItem item = stmt.getLoc().accept(new LocationItemVisitor());
+        leftSideOfAssignment = false;
+        if (item != null && item.getKind() == SymbolKind.VARIABLE) {
+            item.setInitialized(true);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visit(OutputStmt stmt) {
+        stmt.getValue().accept(this);
+        return null;
+    }
+
+    private VarItem declareVariable(Var var, String visibility, boolean initialized) {
+        String name = var.getName().getName();
+        Type type = var.getType();
+        if (type == null && var.getConstructorCall() != null) {
+            String typeName = var.getConstructorCall().getName().getName();
+            type = new UserDefinedType(new Identifier(typeName));
+            addDependency(typeName);
+        }
+        if (type != null) {
+            checkUserType(type, var.getLine());
+        }
+        VarItem item = new VarItem(name, type, var.getIsMutable(), visibility);
+        item.setInitialized(initialized);
+        try {
+            SymbolTable.top.put(item);
+        } catch (ItemAlreadyExistsException e) {
+            System.out.println("Line " + var.getLine() + " : " + name + " already defined");
+            return null;
+        }
+        return item;
+    }
+
+    private void checkUserType(Type type, int line) {
+        String name = type.getStr();
+        if (!isPrimitiveName(name) && getRootItem(name) == null) {
+            System.out.println("Line " + line + " : " + name + " not declared");
+        }
+        if (!isPrimitiveName(name)) {
+            addDependency(name);
+        }
+    }
+
+    private SymbolTableItem resolveMethod(MethodCall methodCall) {
+        try {
+            if (methodCall.getInstance() == null) {
+                SymbolTableItem item = SymbolTable.top.get(methodCall.getCallee().getName());
+                if (item.getKind() == SymbolKind.METHOD) {
+                    return item;
+                }
+                return null;
+            }
+            Type instanceType = methodCall.getInstance().accept(new LocationTypeVisitor());
+            if (instanceType == null) {
+                return null;
+            }
+            SymbolTableItem owner = getRootItem(instanceType.getStr());
+            if (owner == null || owner.getInnerSymbolTable() == null) {
+                return null;
+            }
+            SymbolTableItem methodItem = owner.getInnerSymbolTable().getInCurrentScope(methodCall.getCallee().getName());
+            if (methodItem.getKind() != SymbolKind.METHOD) {
+                return null;
+            }
+            if (!sameOwner(instanceType.getStr()) && isPrivate(methodItem)) {
+                System.out.println("Line " + methodCall.getLine() + " : " + methodCall.getCallee().getName() + " is private");
+            }
+            addDependency(instanceType.getStr());
+            return methodItem;
+        } catch (ItemNotFoundException e) {
+            return null;
+        }
+    }
+
+    private class LocationItemVisitor extends Visitor<SymbolTableItem> {
+        @Override
+        public SymbolTableItem visit(SimpleLoc simpleLoc) {
+            String name = simpleLoc.getId().getName();
+            try {
+                SymbolTableItem item = SymbolTable.top.get(name);
+                if (!leftSideOfAssignment && item.getKind() == SymbolKind.VARIABLE && !item.isInitialized()) {
+                    System.out.println("Line " + simpleLoc.getLine() + " : " + name + " is uninitialized");
+                }
+                return item;
+            } catch (ItemNotFoundException e) {
+                System.out.println("Line " + simpleLoc.getLine() + " : " + name + " not declared");
+                return null;
+            }
+        }
+
+        @Override
+        public SymbolTableItem visit(ThisLoc thisLoc) {
+            if (thisLoc.getLoc() == null) {
+                return getRootItem(currentOwnerName);
+            }
+            return resolveMember(new UserDefinedType(new Identifier(currentOwnerName)), thisLoc.getLoc(), thisLoc.getLine());
+        }
+
+        @Override
+        public SymbolTableItem visit(MemberLoc memberLoc) {
+            String baseName = memberLoc.getMemberName().getName();
+            try {
+                SymbolTableItem base = SymbolTable.top.get(baseName);
+                if (base.getKind() == SymbolKind.VARIABLE && !leftSideOfAssignment && !base.isInitialized()) {
+                    System.out.println("Line " + memberLoc.getLine() + " : " + baseName + " is uninitialized");
+                }
+                return resolveMember(base.getType(), memberLoc.getLoc(), memberLoc.getLine());
+            } catch (ItemNotFoundException e) {
+                System.out.println("Line " + memberLoc.getLine() + " : " + baseName + " not declared");
+                return null;
+            }
+        }
+    }
+
+    private class LocationTypeVisitor extends Visitor<Type> {
+        @Override
+        public Type visit(SimpleLoc simpleLoc) {
+            SymbolTableItem item = simpleLoc.accept(new LocationItemVisitor());
+            return item == null ? null : item.getType();
+        }
+
+        @Override
+        public Type visit(MemberLoc memberLoc) {
+            SymbolTableItem item = memberLoc.accept(new LocationItemVisitor());
+            return item == null ? null : item.getType();
+        }
+
+        @Override
+        public Type visit(ThisLoc thisLoc) {
+            return new UserDefinedType(new Identifier(currentOwnerName));
+        }
+    }
+
+    private SymbolTableItem resolveMember(Type baseType, Location memberPath, int line) {
+        if (baseType == null) {
+            return null;
+        }
+        SymbolTableItem owner = getRootItem(baseType.getStr());
+        if (owner == null || owner.getInnerSymbolTable() == null) {
+            System.out.println("Line " + line + " : " + baseType.getStr() + " not declared");
+            return null;
+        }
+        addDependency(baseType.getStr());
+        String memberName = memberPath.accept(new LocationNameVisitor());
+        if (memberName == null) {
+            return null;
+        }
+        try {
+            SymbolTableItem member = owner.getInnerSymbolTable().getInCurrentScope(memberName);
+            if (!sameOwner(baseType.getStr()) && isPrivate(member)) {
+                System.out.println("Line " + memberPath.getLine() + " : " + memberName + " is private");
+            }
+            if (!leftSideOfAssignment && member.getKind() == SymbolKind.VARIABLE && !member.isInitialized()) {
+                System.out.println("Line " + memberPath.getLine() + " : " + memberName + " is uninitialized");
+            }
+            return member;
+        } catch (ItemNotFoundException e) {
+            System.out.println("Line " + memberPath.getLine() + " : " + memberName + " not declared");
+            return null;
+        }
+    }
+
+    private class LocationNameVisitor extends Visitor<String> {
+        @Override
+        public String visit(SimpleLoc simpleLoc) {
+            return simpleLoc.getId().getName();
+        }
+
+        @Override
+        public String visit(MemberLoc memberLoc) {
+            return memberLoc.getMemberName().getName();
+        }
+
+        @Override
+        public String visit(ThisLoc thisLoc) {
+            return "this";
+        }
+    }
+
+    private void printUnreachableWarnings(Program program) {
+        if (!dependencies.containsKey("Main")) {
+            return;
+        }
+        Set<String> reachable = new HashSet<>();
+        Queue<String> queue = new LinkedList<>();
+        reachable.add("Main");
+        queue.add("Main");
+        while (!queue.isEmpty()) {
+            String current = queue.remove();
+            for (String dep : dependencies.getOrDefault(current, new HashSet<>())) {
+                if (!reachable.contains(dep)) {
+                    reachable.add(dep);
+                    queue.add(dep);
+                }
+            }
+        }
+        for (Map.Entry<String, Integer> entry : declarationLines.entrySet()) {
+            if (!reachable.contains(entry.getKey())) {
+                System.out.println("Warning Line " + entry.getValue() + " : " + entry.getKey() + " is unreachable");
+            }
+        }
+    }
+
+    private SymbolTableItem getRootItem(String name) {
+        try {
+            return SymbolTable.root.getInCurrentScope(name);
+        } catch (ItemNotFoundException e) {
+            return null;
+        }
+    }
+
+    private void addDependency(String name) {
+        if (currentOwnerName != null && dependencies.containsKey(currentOwnerName) && name != null && !isPrimitiveName(name)) {
+            dependencies.get(currentOwnerName).add(name);
+        }
+    }
+
+    private boolean isPrimitiveName(String name) {
+        return "int".equals(name) || "float".equals(name) || "double".equals(name) || "char".equals(name) || "bool".equals(name) || "void".equals(name);
+    }
+
+    private String accessToString(AccessModifier accessModifier) {
+        if (accessModifier == AccessModifier.PRIVATE) {
+            return "private";
+        }
+        return "public";
+    }
+
+    private boolean isPrivate(SymbolTableItem item) {
+        return "private".equals(item.getVisibility());
+    }
+
+    private boolean sameOwner(String name) {
+        return currentOwnerName != null && currentOwnerName.equals(name);
+    }
+}
+
+
+============================================================
+/// FILE: .\src\main\visitor\typeAnalyzer\TypeAnalyzer.java ///
+============================================================
+
+package main.visitor.typeAnalyzer;
+
+import main.ast.core.Program;
+import main.ast.declarations.*;
+import main.ast.declarations.Module;
+import main.ast.expressions.*;
+import main.ast.expressions.operators.BinaryOperator;
+import main.ast.statements.*;
+import main.ast.types.*;
+import main.symbolTable.SymbolTable;
+import main.symbolTable.exceptions.ItemNotFoundException;
+import main.symbolTable.items.*;
+import main.visitor.Visitor;
+
+import java.util.List;
+
+public class TypeAnalyzer extends Visitor<Type> {
+    private Type currentMethodReturnType;
+    private String currentOwnerName;
+
+    @Override
+    public Type visit(Program program) {
+        if (SymbolTable.root == null) {
+            return null;
+        }
+        SymbolTable.push(SymbolTable.root);
+        for (TopLevelDecl decl : program.getTopLevelDeclarations()) {
+            decl.accept(this);
+        }
+        SymbolTable.pop();
+        return null;
+    }
+
+    @Override
+    public Type visit(ModuleDecl moduleDecl) {
+        Module module = moduleDecl.getModule();
+        SymbolTableItem item = getRootItem(module.getName().getName());
+        if (item == null) {
+            return null;
+        }
+        currentOwnerName = module.getName().getName();
+        SymbolTable.push(item.getInnerSymbolTable());
+        for (Member member : module.getMembers()) {
+            member.accept(this);
+        }
+        SymbolTable.pop();
+        currentOwnerName = null;
+        return null;
+    }
+
+    @Override
+    public Type visit(StructDecl structDecl) {
+        Struct struct = structDecl.getStruct();
+        SymbolTableItem item = getRootItem(struct.getName().getName());
+        if (item == null) {
+            return null;
+        }
+        currentOwnerName = struct.getName().getName();
+        SymbolTable.push(item.getInnerSymbolTable());
+        for (Member member : struct.getMembers()) {
+            member.accept(this);
+        }
+        SymbolTable.pop();
+        currentOwnerName = null;
+        return null;
+    }
+
+    @Override
+    public Type visit(MethodDecl methodDecl) {
+        methodDecl.getMethod().accept(this);
+        return null;
+    }
+
+    @Override
+    public Type visit(Method method) {
+        Type previous = currentMethodReturnType;
+        currentMethodReturnType = method.getReturnType();
+        SymbolTable.push(new SymbolTable());
+        for (Parameter parameter : method.getParameters()) {
+            VarItem item = new VarItem(parameter.getName().getName(), parameter.getType(), parameter.getIsMutable(), "public");
+            item.setInitialized(true);
+            try {
+                SymbolTable.top.put(item);
+            } catch (Exception ignored) {
+            }
+        }
+        method.getBody().accept(this);
+        SymbolTable.pop();
+        currentMethodReturnType = previous;
+        return null;
+    }
+
+    @Override
+    public Type visit(Block block) {
+        SymbolTable.push(new SymbolTable());
+        for (Statement statement : block.getStatements()) {
+            statement.accept(this);
+        }
+        SymbolTable.pop();
+        return null;
+    }
+
+    @Override
+    public Type visit(VarDeclStmt stmt) {
+        if (stmt.getInitial() != null) {
+            Type rightType = stmt.getInitial().accept(this);
+            Type leftType = stmt.getVar().getType();
+            if (leftType == null && stmt.getVar().getConstructorCall() != null) {
+                leftType = new UserDefinedType(new Identifier(stmt.getVar().getConstructorCall().getName().getName()));
+            }
+            if (!sameType(leftType, rightType)) {
+                printAssignMismatch(stmt.getLine(), rightType, leftType);
+            }
+        }
+        if (stmt.getVar().getConstructorCall() != null) {
+            stmt.getVar().getConstructorCall().accept(this);
+        }
+        return null;
+    }
+
+    @Override
+    public Type visit(AssignStmt stmt) {
+        Type leftType = stmt.getLeft().accept(this);
+        Type rightType = stmt.getRight().accept(this);
+        SymbolTableItem leftItem = stmt.getLeft().accept(new LocationItemVisitor());
+        if (leftItem != null && leftItem.getKind() == SymbolKind.VARIABLE && !leftItem.isMut()) {
+            System.out.println("Line " + stmt.getLine() + " : Cannot modify immutable variable " + leftItem.getName());
+        }
+        if (!sameType(leftType, rightType)) {
+            printAssignMismatch(stmt.getLine(), rightType, leftType);
+        }
+        return null;
+    }
+
+    @Override
+    public Type visit(IfStmt stmt) {
+        Type conditionType = stmt.getCondition().accept(this);
+        if (!isBool(conditionType)) {
+            System.out.println("Line " + stmt.getLine() + " : Condition type must be bool");
+        }
+        stmt.getThenBranch().accept(this);
+        if (stmt.getElseBranch() != null) {
+            stmt.getElseBranch().accept(this);
+        }
+        return null;
+    }
+
+    @Override
+    public Type visit(WhileStmt stmt) {
+        Type conditionType = stmt.getCondition().accept(this);
+        if (!isBool(conditionType)) {
+            System.out.println("Line " + stmt.getLine() + " : Condition type must be bool");
+        }
+        stmt.getBody().accept(this);
+        return null;
+    }
+
+    @Override
+    public Type visit(ForStmt stmt) {
+        SymbolTable.push(new SymbolTable());
+        for (Statement initializer : stmt.getInitializers()) {
+            initializer.accept(this);
+        }
+        if (stmt.getCondition() != null) {
+            Type conditionType = stmt.getCondition().accept(this);
+            if (!isBool(conditionType)) {
+                System.out.println("Line " + stmt.getLine() + " : Condition type must be bool");
+            }
+        }
+        for (AssignStmt updater : stmt.getUpdaters()) {
+            updater.accept(this);
+        }
+        stmt.getBody().accept(this);
+        SymbolTable.pop();
+        return null;
+    }
+
+    @Override
+    public Type visit(ReturnStmt stmt) {
+        Type actual = new PrimitiveType(PrimitiveType.Primitive.VOID);
+        if (stmt.getValue() != null) {
+            actual = stmt.getValue().accept(this);
+        }
+        if (!sameType(currentMethodReturnType, actual)) {
+            System.out.println("Line " + stmt.getLine() + " : Return type mismatch. Expected " + typeName(currentMethodReturnType) + ", got " + typeName(actual));
+        }
+        return null;
+    }
+
+    @Override
+    public Type visit(MethodCallStmt stmt) {
+        stmt.getMethodCall().accept(this);
+        return null;
+    }
+
+    @Override
+    public Type visit(OutputStmt stmt) {
+        stmt.getValue().accept(this);
+        return null;
+    }
+
+    @Override
+    public Type visit(InputStmt stmt) {
+        SymbolTableItem item = stmt.getLoc().accept(new LocationItemVisitor());
+        if (item != null && item.getKind() == SymbolKind.VARIABLE && !item.isMut()) {
+            System.out.println("Line " + stmt.getLine() + " : Cannot modify immutable variable " + item.getName());
+        }
+        return null;
+    }
+
+    @Override
+    public Type visit(SimpleLoc simpleLoc) {
+        SymbolTableItem item = simpleLoc.accept(new LocationItemVisitor());
+        return item == null ? null : item.getType();
+    }
+
+    @Override
+    public Type visit(MemberLoc memberLoc) {
+        SymbolTableItem item = memberLoc.accept(new LocationItemVisitor());
+        return item == null ? null : item.getType();
+    }
+
+    @Override
+    public Type visit(ThisLoc thisLoc) {
+        return new UserDefinedType(new Identifier(currentOwnerName));
+    }
+
+    @Override
+    public Type visit(MethodCall methodCall) {
+        SymbolTableItem methodItem = resolveMethod(methodCall);
+        if (methodItem == null) {
+            for (Expression arg : methodCall.getArguments()) {
+                arg.accept(this);
+            }
+            return null;
+        }
+        List<Type> expectedTypes = methodItem.getParameterTypes();
+        List<Expression> args = methodCall.getArguments();
+        if (expectedTypes.size() != args.size()) {
+            System.out.println("Line " + methodCall.getLine() + " : Argument count mismatch for method " + methodCall.getCallee().getName() + ". Expected " + expectedTypes.size() + ", got " + args.size());
+        } else {
+            for (int i = 0; i < args.size(); i++) {
+                Type actual = args.get(i).accept(this);
+                Type expected = expectedTypes.get(i);
+                if (!sameType(expected, actual)) {
+                    System.out.println("Line " + methodCall.getLine() + " : Argument type mismatch for method " + methodCall.getCallee().getName() + ", parameter " + (i + 1) + ". Expected " + typeName(expected) + ", got " + typeName(actual));
+                    break;
+                }
+            }
+        }
+        return methodItem.getReturnType();
+    }
+
+    @Override
+    public Type visit(ConstructorCall constructorCall) {
+        for (Expression arg : constructorCall.getArguments()) {
+            arg.accept(this);
+        }
+        return new UserDefinedType(new Identifier(constructorCall.getName().getName()));
+    }
+
+    @Override
+    public Type visit(ConstantExpression constantExpression) {
+        Object value = constantExpression.getValue();
+        Class<?> c = value.getClass();
+        if (c == Integer.class) {
+            return new PrimitiveType(PrimitiveType.Primitive.INT);
+        }
+        if (c == Float.class) {
+            return new PrimitiveType(PrimitiveType.Primitive.FLOAT);
+        }
+        if (c == Double.class) {
+            return new PrimitiveType(PrimitiveType.Primitive.DOUBLE);
+        }
+        if (c == Character.class) {
+            return new PrimitiveType(PrimitiveType.Primitive.CHAR);
+        }
+        if (c == Boolean.class) {
+            return new PrimitiveType(PrimitiveType.Primitive.BOOL);
+        }
+        return null;
+    }
+
+    @Override
+    public Type visit(BinaryExpression expr) {
+        Type left = expr.getLeftOperand().accept(this);
+        Type right = expr.getRightOperand().accept(this);
+        BinaryOperator op = expr.getOperator();
+        if (op == BinaryOperator.LESS_THAN || op == BinaryOperator.GREATER_THAN ||
+            op == BinaryOperator.LESS_THAN_OR_EQUAL_TO || op == BinaryOperator.GREATER_THAN_OR_EQUAL_TO ||
+            op == BinaryOperator.EQUALITY || op == BinaryOperator.INEQUALITY ||
+            op == BinaryOperator.AND || op == BinaryOperator.OR) {
+            return new PrimitiveType(PrimitiveType.Primitive.BOOL);
+        }
+        if (sameType(left, right)) {
+            return left;
+        }
+        return left;
+    }
+
+    @Override
+    public Type visit(UnaryExpression expr) {
+        Type t = expr.getExpression().accept(this);
+        if ("not".equals(expr.getOperand().getSymbol())) {
+            return new PrimitiveType(PrimitiveType.Primitive.BOOL);
+        }
+        return t;
+    }
+
+    @Override
+    public Type visit(ParanthesisExpr expr) {
+        return expr.getExpression().accept(this);
+    }
+
+    private class LocationItemVisitor extends Visitor<SymbolTableItem> {
+        @Override
+        public SymbolTableItem visit(SimpleLoc simpleLoc) {
+            try {
+                return SymbolTable.top.get(simpleLoc.getId().getName());
+            } catch (ItemNotFoundException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public SymbolTableItem visit(ThisLoc thisLoc) {
+            return getRootItem(currentOwnerName);
+        }
+
+        @Override
+        public SymbolTableItem visit(MemberLoc memberLoc) {
+            String baseName = memberLoc.getMemberName().getName();
+            try {
+                SymbolTableItem base = SymbolTable.top.get(baseName);
+                return resolveMember(base.getType(), memberLoc.getLoc());
+            } catch (ItemNotFoundException e) {
+                return null;
+            }
+        }
+    }
+
+    private SymbolTableItem resolveMember(Type baseType, Location memberPath) {
+        if (baseType == null) {
+            return null;
+        }
+        SymbolTableItem owner = getRootItem(baseType.getStr());
+        if (owner == null || owner.getInnerSymbolTable() == null) {
+            return null;
+        }
+        String memberName = memberPath.accept(new LocationNameVisitor());
+        if (memberName == null) {
+            return null;
+        }
+        try {
+            return owner.getInnerSymbolTable().getInCurrentScope(memberName);
+        } catch (ItemNotFoundException e) {
+            return null;
+        }
+    }
+
+    private class LocationNameVisitor extends Visitor<String> {
+        @Override
+        public String visit(SimpleLoc simpleLoc) {
+            return simpleLoc.getId().getName();
+        }
+
+        @Override
+        public String visit(MemberLoc memberLoc) {
+            return memberLoc.getMemberName().getName();
+        }
+    }
+
+    private SymbolTableItem resolveMethod(MethodCall methodCall) {
+        try {
+            if (methodCall.getInstance() == null) {
+                SymbolTableItem item = SymbolTable.top.get(methodCall.getCallee().getName());
+                return item.getKind() == SymbolKind.METHOD ? item : null;
+            }
+            Type instanceType = methodCall.getInstance().accept(this);
+            if (instanceType == null) {
+                return null;
+            }
+            SymbolTableItem owner = getRootItem(instanceType.getStr());
+            if (owner == null || owner.getInnerSymbolTable() == null) {
+                return null;
+            }
+            SymbolTableItem item = owner.getInnerSymbolTable().getInCurrentScope(methodCall.getCallee().getName());
+            return item.getKind() == SymbolKind.METHOD ? item : null;
+        } catch (ItemNotFoundException e) {
+            return null;
+        }
+    }
+
+    private SymbolTableItem getRootItem(String name) {
+        try {
+            return SymbolTable.root.getInCurrentScope(name);
+        } catch (ItemNotFoundException e) {
+            return null;
+        }
+    }
+
+    private boolean sameType(Type a, Type b) {
+        if (a == null || b == null) {
+            return true;
+        }
+        return typeName(a).equals(typeName(b));
+    }
+
+    private boolean isBool(Type type) {
+        return type != null && "bool".equals(typeName(type));
+    }
+
+    private String typeName(Type type) {
+        return type == null ? "unknown" : type.getStr();
+    }
+
+    private void printAssignMismatch(int line, Type source, Type target) {
+        System.out.println("Line " + line + " : Type mismatch in assignment. Cannot assign " + typeName(source) + " to " + typeName(target));
+    }
+}

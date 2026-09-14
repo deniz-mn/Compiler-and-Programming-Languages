@@ -1,0 +1,28 @@
+module LoopTest begin
+    public void main() begin
+        mut int i = 0;
+        mut int sum = 0;
+
+        while (i < 10) begin
+            i = i + 1;
+
+            if (i == 3)
+                continue
+
+            if (i == 8)
+                break
+
+            sum = sum + i;
+        end
+
+        output sum;
+
+        mut int total = 0;
+
+        for (mut int j = 0; j < 5; j = j + 1) begin
+            total = total + j;
+        end
+
+        output total;
+    end
+end

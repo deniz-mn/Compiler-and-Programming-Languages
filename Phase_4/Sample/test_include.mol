@@ -1,0 +1,15 @@
+module MathBase begin
+    public int increment(int value) begin
+        return value + 1;
+    end
+end
+
+module IncludeTest includes MathBase begin
+    public void main() begin
+        output increment(5);
+        output this.increment(10);
+
+        MathBase math = MathBase();
+        output math.increment(20);
+    end
+end

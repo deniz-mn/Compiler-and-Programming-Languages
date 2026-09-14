@@ -1,0 +1,20 @@
+struct Point begin
+    public int x;
+    public int y;
+
+    public int sum() begin
+        return this.x + this.y;
+    end
+end
+
+module StructTest begin
+    public void main() begin
+        Point p = Point(3, 4);
+
+        output p.sum();
+
+        p.x = 10;
+
+        output p.sum();
+    end
+end

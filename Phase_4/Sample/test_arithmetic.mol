@@ -1,0 +1,16 @@
+module ArithmeticTest begin
+    public void main() begin
+        mut int a = 2 + 3 * 4;
+        mut bool b = true and not false;
+
+        output a;
+        output b;
+
+        if (a == 14) begin
+            output 111;
+        end
+        else begin
+            output 222;
+        end
+    end
+end

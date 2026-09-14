@@ -1,0 +1,9 @@
+module InputTest begin
+    public void main() begin
+        mut int number;
+
+        input number;
+
+        output number * 2;
+    end
+end

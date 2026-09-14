@@ -1,0 +1,11 @@
+module PrimitiveTest begin
+    public void main() begin
+        mut float f = 1.5;
+        mut double d = 2.5e0;
+        mut char c = 'A';
+
+        output f + 2.5;
+        output d * 2.0e0;
+        output c;
+    end
+end
